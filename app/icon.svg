@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="SKIN'S icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C0392B" />
+      <stop offset="35%" stop-color="#C8956C" />
+      <stop offset="65%" stop-color="#E8C88A" />
+      <stop offset="100%" stop-color="#A0693A" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)" />
+  <text
+    x="50%"
+    y="59%"
+    text-anchor="middle"
+    font-family="'Cormorant Garamond', Georgia, serif"
+    font-size="154"
+    font-style="italic"
+    font-weight="600"
+    fill="#FDFBF7"
+  >
+    S
+  </text>
+  <circle cx="186" cy="70" r="10" fill="#FDFBF7" opacity="0.92" />
+</svg>

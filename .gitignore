@@ -1,0 +1,14 @@
+.next
+.vercel
+node_modules
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+.DS_Store
+.ocr
+images
+public/catalog/soin-corps
+.DS_Store
+.ocr
+images
