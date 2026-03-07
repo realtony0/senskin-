@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
@@ -74,6 +75,24 @@ const EMPTY_ERRORS = {
   address: false,
   payment: false,
 };
+const HERO_HIGHLIGHTS = [
+  {
+    title: "Sélection exigeante",
+    text: "Des soins choisis pour leur qualité, leur cohérence et leur place dans une vraie routine.",
+  },
+  {
+    title: "Références conformes",
+    text: "Des visuels plus propres, des fiches plus claires et une présentation plus rigoureuse.",
+  },
+  {
+    title: "Routine simplifiée",
+    text: "Un catalogue structuré pour trouver plus vite le bon soin selon la zone et le besoin.",
+  },
+  {
+    title: "Service rassurant",
+    text: "Livraison au Sénégal, contact WhatsApp direct et paiement simple selon votre préférence.",
+  },
+];
 
 function normalizePersistedSettings(settings) {
   if (!settings) {
@@ -342,7 +361,7 @@ function PaymentLogo({ name, className }) {
   if (name === "orange") {
     return (
       <img
-        src="/brands/orange-money-logo.png"
+        src="/brands/orange-money-logo.svg"
         alt="Orange Money"
         className={cn("payment-logo", "orange", className)}
         loading="lazy"
@@ -351,6 +370,44 @@ function PaymentLogo({ name, className }) {
   }
 
   return null;
+}
+
+function isLocalAssetSource(source) {
+  return String(source || "").startsWith("/");
+}
+
+function SmartImage({ src, alt, className, sizes, priority = false }) {
+  const source = String(src || "").trim();
+
+  if (!source) {
+    return null;
+  }
+
+  if (isLocalAssetSource(source)) {
+    return (
+      <Image
+        src={source}
+        alt={alt}
+        fill
+        className={className}
+        sizes={sizes}
+        priority={priority}
+        quality={82}
+        unoptimized={source.endsWith(".svg")}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={source}
+      alt={alt}
+      className={className}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      fetchPriority={priority ? "high" : undefined}
+    />
+  );
 }
 
 function getStockState(stock) {
@@ -1165,11 +1222,11 @@ export default function Home() {
       <div id="shopPage" className={cn("page", currentPage === "shop" && "active")}>
         <div className="ann">
           <div className="ann-t">
-            <span>Livraison à Dakar dès {formatPrice(settings.shippingDakar)} FCFA</span>
+            <span>Dakar — 30 à 45 min dès {formatPrice(settings.shippingDakar)} FCFA</span>
             <span>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</span>
             <span>Wave · Orange Money · Paiement à la livraison</span>
             <span>Catalogue disponible en ligne</span>
-            <span>Livraison à Dakar dès {formatPrice(settings.shippingDakar)} FCFA</span>
+            <span>Dakar — 30 à 45 min dès {formatPrice(settings.shippingDakar)} FCFA</span>
             <span>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</span>
             <span>Wave · Orange Money · Paiement à la livraison</span>
             <span>Catalogue disponible en ligne</span>
@@ -1234,7 +1291,7 @@ export default function Home() {
             <div className="hdr-r">
               <a href={telLink} className="hico" aria-label="Appeler la boutique">
                 <Icon name="phone" />
-                Appel
+                <span className="hico-label">Appel</span>
               </a>
               <a
                 href="#products"
@@ -1246,7 +1303,7 @@ export default function Home() {
                 }}
               >
                 <Icon name="catalog" />
-                Catalogue
+                <span className="hico-label">Catalogue</span>
               </a>
               <button
                 type="button"
@@ -1256,7 +1313,7 @@ export default function Home() {
                 aria-label="Ouvrir le panier"
               >
                 <Icon name="cart" />
-                Panier
+                <span className="hico-label">Panier</span>
                 <span className="hbadge">{cartCount}</span>
               </button>
             </div>
@@ -1299,26 +1356,16 @@ export default function Home() {
 
             <div className="hero-r">
               <div className="stat-grid">
-                <div className="stat">
-                  <div className="stat-n">{products.length}</div>
-                  <div className="stat-l">Produits</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-n">{Object.keys(CATEGORY_LABELS).length}</div>
-                  <div className="stat-l">Catégories</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-n">48h</div>
-                  <div className="stat-l">Livraison Dakar</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-n">4.9/5</div>
-                  <div className="stat-l">Satisfaction client</div>
-                </div>
+                {HERO_HIGHLIGHTS.map((highlight) => (
+                  <div key={highlight.title} className="stat">
+                    <div className="stat-kicker">{highlight.title}</div>
+                    <div className="stat-copy">{highlight.text}</div>
+                  </div>
+                ))}
               </div>
 
               <div className="pay-row">
-                <span>Paiement</span>
+                <span>Paiement simple</span>
                 <div className="ppills">
                   <span className="ppill brand">
                     <PaymentLogo name="wave" />
@@ -1326,7 +1373,7 @@ export default function Home() {
                   <span className="ppill brand">
                     <PaymentLogo name="orange" />
                   </span>
-                  <span className="ppill">Paiement à la livraison</span>
+                  <span className="ppill">À la livraison</span>
                 </div>
               </div>
             </div>
@@ -1341,7 +1388,7 @@ export default function Home() {
               </div>
               <div className="ib-txt">
                 <strong>Livraison à Dakar</strong>
-                <span>À partir de {formatPrice(settings.shippingDakar)} FCFA</span>
+                <span>Environ 30 à 45 min dès {formatPrice(settings.shippingDakar)} FCFA</span>
               </div>
             </div>
             <div className="ib">
@@ -1350,7 +1397,7 @@ export default function Home() {
               </div>
               <div className="ib-txt">
                 <strong>Livraison hors Dakar</strong>
-                <span>{formatPrice(settings.shippingOutside)} FCFA partout</span>
+                <span>{formatPrice(settings.shippingOutside)} FCFA, délai confirmé à la commande</span>
               </div>
             </div>
             <div className="ib">
@@ -1463,15 +1510,21 @@ export default function Home() {
 
           <div className="pgrid">
             {filteredProducts.length ? (
-              filteredProducts.map((product) => {
+              filteredProducts.map((product, index) => {
                 const stockState = getStockState(product.s);
                 const quantity = quantityById[product.id] || 1;
+                const shouldPrioritizeImage = index < 4;
 
                 return (
                   <div key={product.id} className="pcard rv">
                     <div className="pimg">
                       {product.i ? (
-                        <img src={product.i} alt={product.n} loading="lazy" />
+                        <SmartImage
+                          src={product.i}
+                          alt={product.n}
+                          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
+                          priority={shouldPrioritizeImage}
+                        />
                       ) : (
                         <span className="pimg-fallback">{getProductFallbackLabel(product.n)}</span>
                       )}
@@ -1598,7 +1651,7 @@ export default function Home() {
               <ul>
                 <li>Dakar — {formatPrice(settings.shippingDakar)} FCFA</li>
                 <li>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</li>
-                <li>Délai 24–48h à Dakar</li>
+                <li>Dakar — 30 à 45 min</li>
                 <li>Livraison partout au Sénégal</li>
               </ul>
             </div>
@@ -1653,7 +1706,7 @@ export default function Home() {
               <div key={item.id} className="ci">
                 <div className="ci-img">
                   {item.i ? (
-                    <img src={item.i} alt={item.n} loading="lazy" />
+                    <SmartImage src={item.i} alt={item.n} sizes="62px" />
                   ) : (
                     <span className="ci-fallback">{getProductFallbackLabel(item.n)}</span>
                   )}
@@ -1745,7 +1798,7 @@ export default function Home() {
               >
                 <div className="zone-check">{zone === "dakar" ? "✓" : ""}</div>
                 <div className="zone-name">Dakar</div>
-                <div className="zone-sub">Livraison en 24–48h</div>
+                <div className="zone-sub">Livraison en 30 à 45 min</div>
                 <div className="zone-price">
                   {formatPrice(settings.shippingDakar)}
                   <sub> FCFA</sub>
@@ -1759,7 +1812,7 @@ export default function Home() {
               >
                 <div className="zone-check">{zone === "hors" ? "✓" : ""}</div>
                 <div className="zone-name">Hors Dakar</div>
-                <div className="zone-sub">Partout au Sénégal</div>
+                <div className="zone-sub">Délai communiqué à la confirmation</div>
                 <div className="zone-price">
                   {formatPrice(settings.shippingOutside)}
                   <sub> FCFA</sub>
@@ -1941,8 +1994,30 @@ export default function Home() {
 
           <main className="adm-main">
             <div className="adm-topbar">
-              <h1>{ADMIN_PANELS.find((panel) => panel.id === adminPanel)?.label}</h1>
-              <span className="adate">{adminDate}</span>
+              <div>
+                <h1>{ADMIN_PANELS.find((panel) => panel.id === adminPanel)?.label}</h1>
+                <span className="adate">{adminDate}</span>
+              </div>
+              <div className="adm-topbar-actions">
+                <button type="button" className="adm-shop-link" onClick={() => showPage("shop")}>
+                  <Icon name="arrow-left" />
+                  Voir la boutique
+                </button>
+              </div>
+            </div>
+
+            <div className="adm-mobile-nav">
+              {ADMIN_PANELS.map((panel) => (
+                <button
+                  key={panel.id}
+                  type="button"
+                  className={cn("adm-mobile-tab", adminPanel === panel.id && "on")}
+                  onClick={() => setAdminPanel(panel.id)}
+                >
+                  <Icon name={panel.icon} />
+                  {panel.label}
+                </button>
+              ))}
             </div>
 
             <div className="adm-stats">
@@ -2016,66 +2091,75 @@ export default function Home() {
               ) : (
                 <div className="panel-note">Catalogue chargé depuis le fichier local du projet.</div>
               )}
-              <table className="atbl">
-                <thead>
-                  <tr>
-                    <th>Produit</th>
-                    <th>Catégorie</th>
-                    <th>Sous-catégorie</th>
-                    <th>Prix</th>
-                    <th>Stock</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((product) => {
-                    const stockState = getAdminStockState(product.s);
+              <div className="table-scroll">
+                <table className="atbl">
+                  <thead>
+                    <tr>
+                      <th>Produit</th>
+                      <th>Catégorie</th>
+                      <th>Sous-catégorie</th>
+                      <th>Prix</th>
+                      <th>Stock</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((product) => {
+                      const stockState = getAdminStockState(product.s);
 
-                    return (
-                      <tr key={product.id}>
+                      return (
+                        <tr key={product.id}>
                         <td>
                           <span className="td-name">
                             {product.i ? (
-                              <img className="td-thumb" src={product.i} alt={product.n} loading="lazy" />
+                              <span className="td-thumb-wrap">
+                                <SmartImage
+                                  src={product.i}
+                                  alt={product.n}
+                                  className="td-thumb"
+                                  sizes="42px"
+                                />
+                              </span>
                             ) : (
                               <span className="td-fallback">{getProductFallbackLabel(product.n)}</span>
                             )}
-                            <span className="td-text">{product.n}</span>
-                          </span>
-                        </td>
-                        <td>{CATEGORY_LABELS[product.c] || product.c}</td>
-                        <td>{SUBCATEGORY_LABELS[product.sc] || product.sc}</td>
-                        <td className="td-price">{formatPrice(product.p)} F</td>
-                        <td>{product.s}</td>
-                        <td>
-                          <span className={cn("td-badge", stockState.tone)}>{stockState.label}</span>
-                        </td>
-                        <td>
-                          <div className="tbl-actions">
-                            <button
-                              type="button"
-                              className="tbl-btn"
-                              onClick={() => openProductForm(product.id)}
-                            >
-                              <Icon name="edit" />
-                              Modifier
-                            </button>
-                            <button
-                              type="button"
-                              className="tbl-btn del"
-                              onClick={() => deleteProduct(product.id)}
-                            >
-                              <Icon name="trash" />
-                              Supprimer
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              <span className="td-text">{product.n}</span>
+                            </span>
+                          </td>
+                          <td>{CATEGORY_LABELS[product.c] || product.c}</td>
+                          <td>{SUBCATEGORY_LABELS[product.sc] || product.sc}</td>
+                          <td className="td-price">{formatPrice(product.p)} F</td>
+                          <td>{product.s}</td>
+                          <td>
+                            <span className={cn("td-badge", stockState.tone)}>{stockState.label}</span>
+                          </td>
+                          <td>
+                            <div className="tbl-actions">
+                              <button
+                                type="button"
+                                className="tbl-btn"
+                                onClick={() => openProductForm(product.id)}
+                              >
+                                <Icon name="edit" />
+                                Modifier
+                              </button>
+                              <button
+                                type="button"
+                                className="tbl-btn del"
+                                onClick={() => deleteProduct(product.id)}
+                              >
+                                <Icon name="trash" />
+                                Supprimer
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className={cn("adm-panel", adminPanel === "categories" && "on")}>
@@ -2085,45 +2169,47 @@ export default function Home() {
               <div className="panel-note">
                 Chaque catégorie est désormais détaillée avec ses sous-catégories actives.
               </div>
-              <table className="atbl">
-                <thead>
-                  <tr>
-                    <th>Catégorie</th>
-                    <th>Sous-catégories</th>
-                    <th>Produits</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categorySubcategorySummaries.map((summary) => (
-                    <tr key={summary.category}>
-                      <td>
-                        <div className="td-stack">
-                          <strong>{summary.label}</strong>
-                          <span>
-                            {summary.activeSubcategories.length} sous-catégorie
-                            {summary.activeSubcategories.length > 1 ? "s" : ""} active
-                            {summary.activeSubcategories.length > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        {summary.activeSubcategories.length ? (
-                          <div className="td-tags">
-                            {summary.activeSubcategories.map((subcategory) => (
-                              <span key={subcategory.id} className="td-chip">
-                                {subcategory.label} ({subcategory.count})
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="td-muted">Aucun produit</span>
-                        )}
-                      </td>
-                      <td>{summary.count}</td>
+              <div className="table-scroll">
+                <table className="atbl">
+                  <thead>
+                    <tr>
+                      <th>Catégorie</th>
+                      <th>Sous-catégories</th>
+                      <th>Produits</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {categorySubcategorySummaries.map((summary) => (
+                      <tr key={summary.category}>
+                        <td>
+                          <div className="td-stack">
+                            <strong>{summary.label}</strong>
+                            <span>
+                              {summary.activeSubcategories.length} sous-catégorie
+                              {summary.activeSubcategories.length > 1 ? "s" : ""} active
+                              {summary.activeSubcategories.length > 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          {summary.activeSubcategories.length ? (
+                            <div className="td-tags">
+                              {summary.activeSubcategories.map((subcategory) => (
+                                <span key={subcategory.id} className="td-chip">
+                                  {subcategory.label} ({subcategory.count})
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="td-muted">Aucun produit</span>
+                          )}
+                        </td>
+                        <td>{summary.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className={cn("adm-panel", adminPanel === "settings" && "on")}>
