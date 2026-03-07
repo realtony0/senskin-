@@ -138,6 +138,12 @@ header {
   color: var(--brown);
 }
 
+.hdr-l a.is-disabled {
+  color: var(--ink4);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .logo-wrap {
   text-align: left;
   line-height: 1;
@@ -547,11 +553,25 @@ header {
   box-shadow: 0 8px 24px var(--shadow);
 }
 
+.cat-card.disabled {
+  background: var(--white);
+  border-style: dashed;
+  color: var(--ink4);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .cat-card:hover .cc-n,
 .cat-card.on .cc-n,
 .cat-card:hover .cc-meta,
 .cat-card.on .cc-meta {
   color: #fff;
+}
+
+.cat-card.disabled .cc-n,
+.cat-card.disabled .cc-meta {
+  color: var(--ink4);
 }
 
 .cc-n {
@@ -645,6 +665,12 @@ header {
 .tab.on {
   color: var(--brown);
   border-bottom-color: var(--brown);
+}
+
+.tab.disabled {
+  color: var(--ink4);
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .subtabs {

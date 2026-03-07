@@ -81,8 +81,8 @@ const HERO_HIGHLIGHTS = [
     text: "Des soins choisis pour leur qualité, leur cohérence et leur place dans une vraie routine.",
   },
   {
-    title: "Références conformes",
-    text: "Des marques reconnues, des sélections plus cohérentes et une qualité mieux mise en avant.",
+    title: "Choix en confiance",
+    text: "Des visuels plus clairs et des marques reconnues pour vous aider à choisir plus facilement.",
   },
   {
     title: "Routine simplifiée",
@@ -769,6 +769,11 @@ export default function Home() {
     accumulator[key] = products.filter((product) => product.c === key).length;
     return accumulator;
   }, {});
+  const availableCategoryIds = new Set(
+    Object.entries(categoryCounts)
+      .filter(([, count]) => count > 0)
+      .map(([category]) => category),
+  );
   const categorySubcategorySummaries = Object.entries(CATEGORY_LABELS).map(([category, label]) => {
     const activeSubcategories = getVisibleSubcategories(products, category).map((subcategory) => ({
       ...subcategory,
@@ -785,6 +790,13 @@ export default function Home() {
     };
   });
   const productFormSubcategoryOptions = CATEGORY_SUBCATEGORY_OPTIONS[productForm.category] || [];
+
+  useEffect(() => {
+    if (activeTab !== "tous" && !availableCategoryIds.has(activeTab)) {
+      setActiveTab("tous");
+      setActiveSubcategory("tous");
+    }
+  }, [activeTab, products]);
 
   function showToast(message) {
     setToastMessage(message);
@@ -829,6 +841,10 @@ export default function Home() {
   }
 
   function handleTabChange(category) {
+    if (category !== "tous" && !availableCategoryIds.has(category)) {
+      return;
+    }
+
     setCurrentPage("shop");
     setActiveTab(category);
     setActiveSubcategory("tous");
@@ -1249,6 +1265,9 @@ export default function Home() {
               </a>
               <a
                 href="#products"
+                className={cn(!availableCategoryIds.has("visage") && "is-disabled")}
+                aria-disabled={!availableCategoryIds.has("visage")}
+                tabIndex={availableCategoryIds.has("visage") ? undefined : -1}
                 onClick={(event) => {
                   event.preventDefault();
                   handleTabChange("visage");
@@ -1258,6 +1277,9 @@ export default function Home() {
               </a>
               <a
                 href="#products"
+                className={cn(!availableCategoryIds.has("cheveux") && "is-disabled")}
+                aria-disabled={!availableCategoryIds.has("cheveux")}
+                tabIndex={availableCategoryIds.has("cheveux") ? undefined : -1}
                 onClick={(event) => {
                   event.preventDefault();
                   handleTabChange("cheveux");
@@ -1267,6 +1289,9 @@ export default function Home() {
               </a>
               <a
                 href="#products"
+                className={cn(!availableCategoryIds.has("corps") && "is-disabled")}
+                aria-disabled={!availableCategoryIds.has("corps")}
+                tabIndex={availableCategoryIds.has("corps") ? undefined : -1}
                 onClick={(event) => {
                   event.preventDefault();
                   handleTabChange("corps");
@@ -1276,6 +1301,9 @@ export default function Home() {
               </a>
               <a
                 href="#products"
+                className={cn(!availableCategoryIds.has("divers") && "is-disabled")}
+                aria-disabled={!availableCategoryIds.has("divers")}
+                tabIndex={availableCategoryIds.has("divers") ? undefined : -1}
                 onClick={(event) => {
                   event.preventDefault();
                   handleTabChange("divers");
@@ -1423,20 +1451,23 @@ export default function Home() {
           </div>
           <div className="cats-grid">
             {CATEGORY_CARDS.map((category) => {
-              const categoryCount =
-                category.id === "tous" ? products.length : categoryCounts[category.id] || 0;
+              const isAvailable =
+                category.id === "tous" ? Boolean(products.length) : availableCategoryIds.has(category.id);
 
               return (
                 <button
                   key={category.id}
                   type="button"
-                  className={cn("cat-card", activeTab === category.id && "on")}
+                  className={cn(
+                    "cat-card",
+                    activeTab === category.id && "on",
+                    !isAvailable && "disabled",
+                  )}
                   onClick={() => handleTabChange(category.id)}
+                  disabled={!isAvailable}
                 >
                   <div className="cc-n">{category.label}</div>
-                  <div className="cc-meta">
-                    {categoryCount} produit{categoryCount > 1 ? "s" : ""}
-                  </div>
+                  {!isAvailable ? <div className="cc-meta">Bientôt disponible</div> : null}
                 </button>
               );
             })}
@@ -1473,8 +1504,13 @@ export default function Home() {
               <button
                 key={tab.id}
                 type="button"
-                className={cn("tab", activeTab === tab.id && "on")}
+                className={cn(
+                  "tab",
+                  activeTab === tab.id && "on",
+                  tab.id !== "tous" && !availableCategoryIds.has(tab.id) && "disabled",
+                )}
                 onClick={() => handleTabChange(tab.id)}
+                disabled={tab.id !== "tous" && !availableCategoryIds.has(tab.id)}
               >
                 {tab.label}
               </button>
