@@ -82,7 +82,7 @@ const HERO_HIGHLIGHTS = [
   },
   {
     title: "Références conformes",
-    text: "Des visuels plus propres, des fiches plus claires et une présentation plus rigoureuse.",
+    text: "Des marques reconnues, des sélections plus cohérentes et une qualité mieux mise en avant.",
   },
   {
     title: "Routine simplifiée",
@@ -90,7 +90,7 @@ const HERO_HIGHLIGHTS = [
   },
   {
     title: "Service rassurant",
-    text: "Livraison au Sénégal, contact WhatsApp direct et paiement simple selon votre préférence.",
+    text: "Livraison au Sénégal, contact WhatsApp direct et accompagnement rapide avant commande.",
   },
 ];
 
@@ -739,8 +739,10 @@ export default function Home() {
   }, [activeSubcategory, activeTab, products]);
 
   const whatsappDigits = getWhatsappDigits(settings.whatsappDisplay);
-  const telLink = whatsappDigits ? `tel:+${whatsappDigits}` : "#";
   const whatsappBaseLink = whatsappDigits ? `https://wa.me/${whatsappDigits}` : "#";
+  const whatsappContactLink = `${whatsappBaseLink}?text=${encodeURIComponent(
+    "Bonjour, je souhaite obtenir des informations sur vos produits.",
+  )}`;
   const visibleSubcategories =
     activeTab === "tous" ? [] : getVisibleSubcategories(products, activeTab);
   const filteredProducts = products.filter((product) => {
@@ -1289,9 +1291,15 @@ export default function Home() {
             </div>
 
             <div className="hdr-r">
-              <a href={telLink} className="hico" aria-label="Appeler la boutique">
-                <Icon name="phone" />
-                <span className="hico-label">Appel</span>
+              <a
+                href={whatsappContactLink}
+                className="hico"
+                aria-label="Contacter la boutique sur WhatsApp"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Icon name="whatsapp" />
+                <span className="hico-label">Contact</span>
               </a>
               <a
                 href="#products"
@@ -1348,8 +1356,8 @@ export default function Home() {
                 >
                   Découvrir la boutique
                 </a>
-                <a href={telLink} className="btn-sec">
-                  Nous appeler
+                <a href={whatsappContactLink} className="btn-sec" target="_blank" rel="noreferrer">
+                  Nous contacter
                 </a>
               </div>
             </div>
@@ -1362,19 +1370,6 @@ export default function Home() {
                     <div className="stat-copy">{highlight.text}</div>
                   </div>
                 ))}
-              </div>
-
-              <div className="pay-row">
-                <span>Paiement simple</span>
-                <div className="ppills">
-                  <span className="ppill brand">
-                    <PaymentLogo name="wave" />
-                  </span>
-                  <span className="ppill brand">
-                    <PaymentLogo name="orange" />
-                  </span>
-                  <span className="ppill">À la livraison</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1676,9 +1671,7 @@ export default function Home() {
 
         <a
           className="wafab"
-          href={`${whatsappBaseLink}?text=${encodeURIComponent(
-            "Bonjour, je souhaite obtenir des informations sur vos produits.",
-          )}`}
+          href={whatsappContactLink}
           target="_blank"
           rel="noreferrer"
           aria-label="Contacter sur WhatsApp"
