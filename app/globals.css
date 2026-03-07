@@ -1861,6 +1861,15 @@ footer {
   letter-spacing: 1.5px;
 }
 
+.fbot a {
+  color: var(--gold2);
+  text-decoration: none;
+}
+
+.fbot a:hover {
+  text-decoration: underline;
+}
+
 .wafab {
   position: fixed;
   bottom: 16px;

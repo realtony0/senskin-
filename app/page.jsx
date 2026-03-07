@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
+import { MMB_WHATSAPP_LINK } from "@/lib/site";
 import {
   buildSubcategoryLabels,
   CATEGORY_LABELS,
@@ -2062,6 +2063,17 @@ export default function Home() {
           <div className="fbot" onClick={handleFooterTap}>
             <span>© 2026 {settings.shopName} — {settings.tagline.toUpperCase()}</span>
             <span>DAKAR · SÉNÉGAL</span>
+            <span>
+              Conçu par{" "}
+              <a
+                href={MMB_WHATSAPP_LINK}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                Mmb
+              </a>
+            </span>
           </div>
         </footer>
 
