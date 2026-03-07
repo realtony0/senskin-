@@ -8,32 +8,211 @@ import {
   hasServiceSupabaseConfig,
 } from "@/lib/supabase/service-server";
 
-const PRODUCT_COLUMNS = "id, name, category, subcategory, emoji, image, description, price, stock";
+const PRODUCT_SCHEMA_VARIANTS = [
+  { imageColumn: "image", hasSubcategory: true },
+  { imageColumn: "images", hasSubcategory: true },
+  { imageColumn: "image", hasSubcategory: false },
+  { imageColumn: "images", hasSubcategory: false },
+];
+
+function getProductSelectColumns(variant) {
+  return [
+    "id",
+    "name",
+    "category",
+    variant.hasSubcategory ? "subcategory" : null,
+    "emoji",
+    variant.imageColumn,
+    "description",
+    "price",
+    "stock",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function getProductMutationColumns(variant) {
+  return [
+    "name",
+    "category",
+    variant.hasSubcategory ? "subcategory" : null,
+    "emoji",
+    variant.imageColumn,
+    "description",
+    "price",
+    "stock",
+  ].filter(Boolean);
+}
+
+function getProductMutationValues(variant, payload) {
+  return [
+    payload.name,
+    payload.category,
+    ...(variant.hasSubcategory ? [payload.subcategory] : []),
+    payload.emoji,
+    payload.image,
+    payload.description,
+    payload.price,
+    payload.stock,
+  ];
+}
+
+function getSupabaseProductPayload(variant, payload) {
+  return {
+    name: payload.name,
+    category: payload.category,
+    ...(variant.hasSubcategory ? { subcategory: payload.subcategory } : {}),
+    emoji: payload.emoji,
+    [variant.imageColumn]: payload.image,
+    description: payload.description,
+    price: payload.price,
+    stock: payload.stock,
+  };
+}
+
+function isSchemaMismatchError(error) {
+  const message = String(error?.message || error?.details || error?.hint || "").toLowerCase();
+
+  return (
+    error?.code === "42703" ||
+    error?.code === "PGRST204" ||
+    message.includes("schema cache") ||
+    message.includes("column") && message.includes("does not exist") ||
+    message.includes("could not find") && message.includes("column")
+  );
+}
+
+async function runWithProductSchemaVariants(runVariant) {
+  let lastError;
+
+  for (const variant of PRODUCT_SCHEMA_VARIANTS) {
+    try {
+      return await runVariant(variant);
+    } catch (error) {
+      lastError = error;
+
+      if (!isSchemaMismatchError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function getProductsFromDatabase() {
+  const result = await runWithProductSchemaVariants((variant) =>
+    query(
+      `select ${getProductSelectColumns(variant)}
+       from products
+       order by id asc`,
+    ),
+  );
+
+  return result.rows.map(mapProductRow);
+}
+
+async function getProductsFromSupabase() {
+  const supabase = createServiceSupabaseClient();
+  const result = await runWithProductSchemaVariants(async (variant) => {
+    const { data, error } = await supabase
+      .from("products")
+      .select(getProductSelectColumns(variant))
+      .order("id");
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
+  });
+
+  return result.map(mapProductRow);
+}
+
+async function createProductInDatabase(payload) {
+  const result = await runWithProductSchemaVariants((variant) => {
+    const columns = getProductMutationColumns(variant);
+    const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
+
+    return query(
+      `insert into products (${columns.join(", ")})
+       values (${placeholders})
+       returning ${getProductSelectColumns(variant)}`,
+      getProductMutationValues(variant, payload),
+    );
+  });
+
+  return mapProductRow(result.rows[0]);
+}
+
+async function createProductInSupabase(payload) {
+  const supabase = createServiceSupabaseClient();
+  const result = await runWithProductSchemaVariants(async (variant) => {
+    const { data, error } = await supabase
+      .from("products")
+      .insert(getSupabaseProductPayload(variant, payload))
+      .select(getProductSelectColumns(variant))
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  });
+
+  return mapProductRow(result);
+}
+
+async function updateProductInDatabase(id, payload) {
+  const result = await runWithProductSchemaVariants((variant) => {
+    const columns = getProductMutationColumns(variant);
+    const assignments = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+
+    return query(
+      `update products
+       set ${assignments}
+       where id = $${columns.length + 1}
+       returning ${getProductSelectColumns(variant)}`,
+      [...getProductMutationValues(variant, payload), id],
+    );
+  });
+
+  return result.rows[0] ? mapProductRow(result.rows[0]) : null;
+}
+
+async function updateProductInSupabase(id, payload) {
+  const supabase = createServiceSupabaseClient();
+  const result = await runWithProductSchemaVariants(async (variant) => {
+    const { data, error } = await supabase
+      .from("products")
+      .update(getSupabaseProductPayload(variant, payload))
+      .eq("id", id)
+      .select(getProductSelectColumns(variant))
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  });
+
+  return result ? mapProductRow(result) : null;
+}
 
 export async function GET() {
   try {
-    const { rows } = await query(
-      `select ${PRODUCT_COLUMNS}
-       from products
-       order by id asc`,
-    );
-
     return NextResponse.json({
-      products: rows.map(mapProductRow),
+      products: await getProductsFromDatabase(),
       source: "database",
     });
   } catch (dbError) {
     if (hasServiceSupabaseConfig()) {
       try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error } = await supabase.from("products").select(PRODUCT_COLUMNS).order("id");
-
-        if (error) {
-          throw error;
-        }
-
         return NextResponse.json({
-          products: (data || []).map(mapProductRow),
+          products: await getProductsFromSupabase(),
           source: "supabase",
         });
       } catch (supabaseError) {
@@ -61,38 +240,14 @@ export async function POST(request) {
   const payload = mapProductPayload(product);
 
   try {
-    const { rows } = await query(
-      `insert into products (name, category, subcategory, emoji, image, description, price, stock)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
-       returning ${PRODUCT_COLUMNS}`,
-      [
-        payload.name,
-        payload.category,
-        payload.subcategory,
-        payload.emoji,
-        payload.image,
-        payload.description,
-        payload.price,
-        payload.stock,
-      ],
-    );
-
-    return NextResponse.json({ product: mapProductRow(rows[0]) });
+    return NextResponse.json({ product: await createProductInDatabase(payload) });
   } catch (dbError) {
     if (hasServiceSupabaseConfig()) {
       try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error } = await supabase
-          .from("products")
-          .insert(payload)
-          .select(PRODUCT_COLUMNS)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        return NextResponse.json({ product: mapProductRow(data), source: "supabase" });
+        return NextResponse.json({
+          product: await createProductInSupabase(payload),
+          source: "supabase",
+        });
       } catch (supabaseError) {
         return NextResponse.json(
           { error: supabaseError.message || dbError.message || "Unable to create product" },
@@ -113,56 +268,23 @@ export async function PUT(request) {
   const payload = mapProductPayload(product);
 
   try {
-    const { rows } = await query(
-      `update products
-       set name = $1,
-           category = $2,
-           subcategory = $3,
-           emoji = $4,
-           image = $5,
-           description = $6,
-           price = $7,
-           stock = $8
-       where id = $9
-       returning ${PRODUCT_COLUMNS}`,
-      [
-        payload.name,
-        payload.category,
-        payload.subcategory,
-        payload.emoji,
-        payload.image,
-        payload.description,
-        payload.price,
-        payload.stock,
-        product.id,
-      ],
-    );
+    const updatedProduct = await updateProductInDatabase(product.id, payload);
 
-    if (!rows[0]) {
+    if (!updatedProduct) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ product: mapProductRow(rows[0]) });
+    return NextResponse.json({ product: updatedProduct });
   } catch (dbError) {
     if (hasServiceSupabaseConfig()) {
       try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error } = await supabase
-          .from("products")
-          .update(payload)
-          .eq("id", product.id)
-          .select(PRODUCT_COLUMNS)
-          .maybeSingle();
+        const updatedProduct = await updateProductInSupabase(product.id, payload);
 
-        if (error) {
-          throw error;
-        }
-
-        if (!data) {
+        if (!updatedProduct) {
           return NextResponse.json({ error: "Product not found" }, { status: 404 });
         }
 
-        return NextResponse.json({ product: mapProductRow(data), source: "supabase" });
+        return NextResponse.json({ product: updatedProduct, source: "supabase" });
       } catch (supabaseError) {
         return NextResponse.json(
           { error: supabaseError.message || dbError.message || "Unable to update product" },
