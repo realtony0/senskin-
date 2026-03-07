@@ -3,11 +3,17 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
 import { mapProductPayload, mapProductRow } from "@/lib/supabase/mappers";
+import {
+  createServiceSupabaseClient,
+  hasServiceSupabaseConfig,
+} from "@/lib/supabase/service-server";
+
+const PRODUCT_COLUMNS = "id, name, category, subcategory, emoji, image, description, price, stock";
 
 export async function GET() {
   try {
     const { rows } = await query(
-      `select id, name, category, subcategory, emoji, image, description, price, stock
+      `select ${PRODUCT_COLUMNS}
        from products
        order by id asc`,
     );
@@ -17,6 +23,31 @@ export async function GET() {
       source: "database",
     });
   } catch (dbError) {
+    if (hasServiceSupabaseConfig()) {
+      try {
+        const supabase = createServiceSupabaseClient();
+        const { data, error } = await supabase.from("products").select(PRODUCT_COLUMNS).order("id");
+
+        if (error) {
+          throw error;
+        }
+
+        return NextResponse.json({
+          products: (data || []).map(mapProductRow),
+          source: "supabase",
+        });
+      } catch (supabaseError) {
+        return NextResponse.json({
+          products: INITIAL_PRODUCTS,
+          source: "local",
+          warning:
+            supabaseError.message ||
+            dbError.message ||
+            "Unable to fetch products from database or Supabase",
+        });
+      }
+    }
+
     return NextResponse.json({
       products: INITIAL_PRODUCTS,
       source: "local",
@@ -26,13 +57,14 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const { product } = await request.json();
+  const payload = mapProductPayload(product);
+
   try {
-    const { product } = await request.json();
-    const payload = mapProductPayload(product);
     const { rows } = await query(
       `insert into products (name, category, subcategory, emoji, image, description, price, stock)
        values ($1, $2, $3, $4, $5, $6, $7, $8)
-       returning id, name, category, subcategory, emoji, image, description, price, stock`,
+       returning ${PRODUCT_COLUMNS}`,
       [
         payload.name,
         payload.category,
@@ -46,18 +78,41 @@ export async function POST(request) {
     );
 
     return NextResponse.json({ product: mapProductRow(rows[0]) });
-  } catch (error) {
+  } catch (dbError) {
+    if (hasServiceSupabaseConfig()) {
+      try {
+        const supabase = createServiceSupabaseClient();
+        const { data, error } = await supabase
+          .from("products")
+          .insert(payload)
+          .select(PRODUCT_COLUMNS)
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        return NextResponse.json({ product: mapProductRow(data), source: "supabase" });
+      } catch (supabaseError) {
+        return NextResponse.json(
+          { error: supabaseError.message || dbError.message || "Unable to create product" },
+          { status: 500 },
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: error.message || "Unable to create product" },
+      { error: dbError.message || "Unable to create product" },
       { status: 500 },
     );
   }
 }
 
 export async function PUT(request) {
+  const { product } = await request.json();
+  const payload = mapProductPayload(product);
+
   try {
-    const { product } = await request.json();
-    const payload = mapProductPayload(product);
     const { rows } = await query(
       `update products
        set name = $1,
@@ -69,7 +124,7 @@ export async function PUT(request) {
            price = $7,
            stock = $8
        where id = $9
-       returning id, name, category, subcategory, emoji, image, description, price, stock`,
+       returning ${PRODUCT_COLUMNS}`,
       [
         payload.name,
         payload.category,
@@ -88,17 +143,45 @@ export async function PUT(request) {
     }
 
     return NextResponse.json({ product: mapProductRow(rows[0]) });
-  } catch (error) {
+  } catch (dbError) {
+    if (hasServiceSupabaseConfig()) {
+      try {
+        const supabase = createServiceSupabaseClient();
+        const { data, error } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", product.id)
+          .select(PRODUCT_COLUMNS)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          return NextResponse.json({ error: "Product not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ product: mapProductRow(data), source: "supabase" });
+      } catch (supabaseError) {
+        return NextResponse.json(
+          { error: supabaseError.message || dbError.message || "Unable to update product" },
+          { status: 500 },
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: error.message || "Unable to update product" },
+      { error: dbError.message || "Unable to update product" },
       { status: 500 },
     );
   }
 }
 
 export async function DELETE(request) {
+  const { id } = await request.json();
+
   try {
-    const { id } = await request.json();
     const result = await query("delete from products where id = $1", [id]);
 
     if (!result.rowCount) {
@@ -106,9 +189,36 @@ export async function DELETE(request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch (dbError) {
+    if (hasServiceSupabaseConfig()) {
+      try {
+        const supabase = createServiceSupabaseClient();
+        const { data, error } = await supabase
+          .from("products")
+          .delete()
+          .eq("id", id)
+          .select("id")
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          return NextResponse.json({ error: "Product not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ ok: true, source: "supabase" });
+      } catch (supabaseError) {
+        return NextResponse.json(
+          { error: supabaseError.message || dbError.message || "Unable to delete product" },
+          { status: 500 },
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: error.message || "Unable to delete product" },
+      { error: dbError.message || "Unable to delete product" },
       { status: 500 },
     );
   }

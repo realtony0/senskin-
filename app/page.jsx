@@ -1078,7 +1078,7 @@ export default function Home() {
       setDatabaseStatusMessage(
         error.message || "Impossible de mettre à jour la commande dans la base.",
       );
-      showToast("Erreur de synchronisation");
+      showToast(error.message || "Erreur de synchronisation");
     }
   }
 
@@ -1185,7 +1185,7 @@ export default function Home() {
       setDatabaseStatusMessage(
         error.message || "Impossible d'enregistrer le produit dans la base.",
       );
-      showToast("Erreur de synchronisation");
+      showToast(error.message || "Erreur de synchronisation");
     }
   }
 
@@ -1209,7 +1209,7 @@ export default function Home() {
       setDatabaseStatusMessage(
         error.message || "Impossible de supprimer le produit dans la base.",
       );
-      showToast("Erreur de synchronisation");
+      showToast(error.message || "Erreur de synchronisation");
     }
   }
 
