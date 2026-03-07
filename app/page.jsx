@@ -62,7 +62,7 @@ const EMPTY_PRODUCT_FORM = {
   image: "",
   description: "",
   price: "",
-  stock: "",
+  availability: "available",
 };
 const EMPTY_CHECKOUT = {
   name: "",
@@ -415,11 +415,7 @@ function getStockState(stock) {
     return { tone: "sout", label: "Rupture de stock" };
   }
 
-  if (stock <= 5) {
-    return { tone: "slow", label: `Plus que ${stock} en stock` };
-  }
-
-  return { tone: "sok", label: `${stock} en stock` };
+  return null;
 }
 
 function getAdminStockState(stock) {
@@ -427,11 +423,7 @@ function getAdminStockState(stock) {
     return { tone: "td-out", label: "Rupture" };
   }
 
-  if (stock <= 5) {
-    return { tone: "td-low", label: `${stock} restants` };
-  }
-
-  return { tone: "td-ok", label: `${stock} en stock` };
+  return { tone: "td-ok", label: "Disponible" };
 }
 
 function getAdminDate() {
@@ -1113,7 +1105,7 @@ export default function Home() {
       image: product.i || "",
       description: product.d,
       price: String(product.p),
-      stock: String(product.s),
+      availability: product.s === 0 ? "out" : "available",
     });
     setProductFormOpen(true);
   }
@@ -1149,9 +1141,9 @@ export default function Home() {
   async function saveProduct() {
     const name = productForm.name.trim();
     const price = Number(productForm.price);
-    const stock = Number(productForm.stock);
+    const stock = productForm.availability === "out" ? 0 : 1;
 
-    if (!name || Number.isNaN(price) || Number.isNaN(stock)) {
+    if (!name || Number.isNaN(price)) {
       showToast("Veuillez remplir tous les champs obligatoires");
       return;
     }
@@ -1575,10 +1567,12 @@ export default function Home() {
                           {formatPrice(product.p)}
                           <sup>FCFA</sup>
                         </div>
-                        <div className={cn("pstock", stockState.tone)}>
-                          <span className="sd" />
-                          {stockState.label}
-                        </div>
+                        {stockState ? (
+                          <div className={cn("pstock", stockState.tone)}>
+                            <span className="sd" />
+                            {stockState.label}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="qwrap">
                         <div className="qbox">
@@ -2128,8 +2122,7 @@ export default function Home() {
                       <th>Catégorie</th>
                       <th>Sous-catégorie</th>
                       <th>Prix</th>
-                      <th>Stock</th>
-                      <th>Statut</th>
+                      <th>Disponibilité</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -2159,7 +2152,6 @@ export default function Home() {
                           <td>{CATEGORY_LABELS[product.c] || product.c}</td>
                           <td>{SUBCATEGORY_LABELS[product.sc] || product.sc}</td>
                           <td className="td-price">{formatPrice(product.p)} F</td>
-                          <td>{product.s}</td>
                           <td>
                             <span className={cn("td-badge", stockState.tone)}>{stockState.label}</span>
                           </td>
@@ -2448,17 +2440,18 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="flbl">Stock *</label>
-              <input
-                className="finput"
-                type="number"
-                placeholder="10"
+              <label className="flbl">Disponibilité *</label>
+              <select
+                className="fselect"
                 style={{ marginBottom: 0 }}
-                value={productForm.stock}
+                value={productForm.availability}
                 onChange={(event) =>
-                  setProductForm((current) => ({ ...current, stock: event.target.value }))
+                  setProductForm((current) => ({ ...current, availability: event.target.value }))
                 }
-              />
+              >
+                <option value="available">Disponible</option>
+                <option value="out">Rupture de stock</option>
+              </select>
             </div>
           </div>
 
