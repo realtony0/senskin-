@@ -1803,7 +1803,7 @@ footer {
   margin: 0 auto 40px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 16px;
 }
 
 .footer-logo {
@@ -1821,61 +1821,25 @@ footer {
   color: rgba(255, 255, 255, 0.4);
   line-height: 1.8;
   font-weight: 300;
-  max-width: none;
+  max-width: 520px;
 }
 
-.fb-soc {
+.footer-meta {
   display: flex;
-  gap: 8px;
-  margin-top: 20px;
   flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
 }
 
-.fb-soc a {
-  min-height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
+.footer-meta span {
+  min-height: 34px;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
   font-size: 11px;
   padding: 0 12px;
   color: rgba(255, 255, 255, 0.45);
-  transition: all 0.2s;
   border-radius: 999px;
-  flex: 1 1 calc(50% - 4px);
-}
-
-.fb-soc a:hover {
-  border-color: var(--gold2);
-  color: var(--gold2);
-}
-
-.fc h4 {
-  font-size: 9px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--gold2);
-  font-weight: 700;
-  margin-bottom: 18px;
-}
-
-.fc ul {
-  list-style: none;
-}
-
-.fc ul li {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-weight: 300;
-  transition: color 0.2s;
-}
-
-.fc ul li:hover {
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .fbot {
@@ -2090,7 +2054,7 @@ footer {
 }
 
 .adm-main {
-  padding: 16px;
+  padding: 16px 16px calc(22px + env(safe-area-inset-bottom, 0px));
 }
 
 .adm-topbar {
@@ -2120,6 +2084,7 @@ footer {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  width: 100%;
 }
 
 .adm-shop-link {
@@ -2138,6 +2103,8 @@ footer {
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
 }
 
 .adm-shop-link:hover {
@@ -2149,9 +2116,13 @@ footer {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding: 4px 0 10px;
   margin: -4px 0 24px;
   scrollbar-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: linear-gradient(180deg, var(--off) 78%, rgba(253, 251, 247, 0));
 }
 
 .adm-mobile-nav::-webkit-scrollbar {
@@ -2277,7 +2248,9 @@ footer {
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
 }
 
 .btn-add:hover {
@@ -2286,18 +2259,35 @@ footer {
 
 .atbl {
   width: 100%;
-  border-collapse: collapse;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  min-width: 720px;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  display: block;
 }
 
 .table-scroll {
-  overflow-x: auto;
-  border-radius: 8px;
+  overflow: visible;
+  border-radius: 0;
   -webkit-overflow-scrolling: touch;
+}
+
+.atbl thead {
+  display: none;
+}
+
+.atbl tbody {
+  display: grid;
+  gap: 12px;
+}
+
+.atbl tr {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(123, 79, 46, 0.04);
 }
 
 .atbl th {
@@ -2313,11 +2303,25 @@ footer {
 }
 
 .atbl td {
-  padding: 12px 16px;
+  padding: 0;
   font-size: 13px;
   color: var(--ink2);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   vertical-align: middle;
+  display: grid;
+  grid-template-columns: minmax(0, 96px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.atbl td::before {
+  content: attr(data-label);
+  font-size: 10px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ink4);
+  line-height: 1.4;
 }
 
 .atbl tr:last-child td {
@@ -2325,7 +2329,11 @@ footer {
 }
 
 .atbl tr:hover td {
-  background: var(--off2);
+  background: transparent;
+}
+
+.atbl td[data-label="Actions"] {
+  grid-template-columns: 1fr;
 }
 
 .td-name {
@@ -2411,10 +2419,11 @@ footer {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .tbl-btn {
-  min-height: 30px;
+  min-height: 38px;
   border: 1px solid var(--border);
   background: var(--white);
   cursor: pointer;
@@ -2429,6 +2438,7 @@ footer {
   transition: all 0.2s;
   border-radius: 999px;
   padding: 0 10px;
+  flex: 1 1 140px;
 }
 
 .tbl-btn:hover {
@@ -2634,6 +2644,35 @@ footer {
   max-width: none;
 }
 
+.category-form-help {
+  font-size: 12px;
+  color: var(--ink4);
+  line-height: 1.6;
+  margin: -8px 0 16px;
+}
+
+.category-subcategory-list {
+  display: grid;
+  gap: 12px;
+}
+
+.category-subcategory-row {
+  display: grid;
+  gap: 10px;
+}
+
+.category-subcategory-row .finput {
+  margin-bottom: 0;
+}
+
+.category-subcategory-remove {
+  width: 100%;
+}
+
+.category-subcategory-add {
+  margin-top: 14px;
+}
+
 .pform-ov {
   position: fixed;
   inset: 0;
@@ -2805,6 +2844,15 @@ footer {
     grid-template-columns: 1fr 1fr;
   }
 
+  .category-subcategory-row {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+
+  .category-subcategory-remove {
+    width: auto;
+  }
+
   .qwrap {
     flex-direction: row;
     align-items: center;
@@ -2937,12 +2985,7 @@ footer {
   }
 
   .fg {
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 56px;
-  }
-
-  .fb-soc a {
-    flex: 0 0 auto;
+    gap: 24px;
   }
 
   .fbot {
@@ -2973,6 +3016,15 @@ footer {
     margin-bottom: 32px;
   }
 
+  .adm-topbar-actions {
+    width: auto;
+  }
+
+  .adm-shop-link,
+  .btn-add {
+    width: auto;
+  }
+
   .adm-stats {
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
@@ -2982,6 +3034,61 @@ footer {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    border-radius: 8px;
+  }
+
+  .atbl {
+    display: table;
+    border-collapse: collapse;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 720px;
+  }
+
+  .atbl thead {
+    display: table-header-group;
+  }
+
+  .atbl tbody {
+    display: table-row-group;
+  }
+
+  .atbl tr {
+    display: table-row;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .atbl td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: table-cell;
+  }
+
+  .atbl td::before {
+    display: none;
+  }
+
+  .atbl tr:hover td {
+    background: var(--off2);
+  }
+
+  .tbl-actions {
+    width: auto;
+  }
+
+  .tbl-btn {
+    min-height: 30px;
+    flex: 0 0 auto;
   }
 
   .pgrid {

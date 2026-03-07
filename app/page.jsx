@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
 import {
+  buildSubcategoryLabels,
   CATEGORY_LABELS,
   CATEGORY_SUBCATEGORY_OPTIONS,
-  SUBCATEGORY_LABELS,
   getDefaultSubcategory,
   getVisibleSubcategories,
   isSubcategoryForCategory,
@@ -17,26 +17,7 @@ import {
 
 const STORAGE_KEY = "jb9store.next";
 const ADMIN_ACCESS_KEY = "jb9store.admin.access";
-const CATEGORY_CARDS = [
-  { id: "tous", label: "Tout voir" },
-  { id: "cheveux", label: "Cheveux" },
-  { id: "visage", label: "Visage" },
-  { id: "corps", label: "Corps" },
-  { id: "mains", label: "Mains" },
-  { id: "pieds", label: "Pieds" },
-  { id: "buccal", label: "Buccal" },
-  { id: "divers", label: "Divers" },
-];
-const PRODUCT_TABS = [
-  { id: "tous", label: "Tout voir" },
-  { id: "cheveux", label: "Cheveux" },
-  { id: "visage", label: "Visage" },
-  { id: "corps", label: "Corps" },
-  { id: "mains", label: "Mains" },
-  { id: "pieds", label: "Pieds" },
-  { id: "buccal", label: "Buccal" },
-  { id: "divers", label: "Divers" },
-];
+const DEFAULT_CATEGORY_ORDER = Object.keys(CATEGORY_LABELS);
 const ADMIN_PANELS = [
   { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
   { id: "orders", label: "Commandes", icon: "orders" },
@@ -75,6 +56,10 @@ const EMPTY_ERRORS = {
   address: false,
   payment: false,
 };
+const EMPTY_CATEGORY_FORM = {
+  name: "",
+  subcategories: [{ id: "", label: "" }],
+};
 const HERO_HIGHLIGHTS = [
   {
     title: "Sélection exigeante",
@@ -93,6 +78,153 @@ const HERO_HIGHLIGHTS = [
     text: "Livraison au Sénégal, contact WhatsApp direct et accompagnement rapide avant commande.",
   },
 ];
+
+function cloneCategoryLabels(labels = CATEGORY_LABELS) {
+  return { ...labels };
+}
+
+function cloneCategorySubcategoryOptions(options = CATEGORY_SUBCATEGORY_OPTIONS) {
+  return Object.fromEntries(
+    Object.entries(options).map(([categoryId, entries]) => [
+      categoryId,
+      Array.isArray(entries) ? entries.map((entry) => ({ ...entry })) : [],
+    ]),
+  );
+}
+
+function normalizeStoredCategoryLabels(labels) {
+  const nextLabels = cloneCategoryLabels();
+
+  if (!labels || typeof labels !== "object") {
+    return nextLabels;
+  }
+
+  Object.entries(labels).forEach(([categoryId, label]) => {
+    const nextCategoryId = String(categoryId || "").trim();
+    const nextLabel = String(label || "").trim();
+
+    if (nextCategoryId && nextLabel) {
+      nextLabels[nextCategoryId] = nextLabel;
+    }
+  });
+
+  return nextLabels;
+}
+
+function normalizeStoredCategorySubcategoryOptions(options) {
+  const nextOptions = cloneCategorySubcategoryOptions();
+
+  if (!options || typeof options !== "object") {
+    return nextOptions;
+  }
+
+  Object.entries(options).forEach(([categoryId, entries]) => {
+    const nextCategoryId = String(categoryId || "").trim();
+
+    if (!nextCategoryId || !Array.isArray(entries)) {
+      return;
+    }
+
+    nextOptions[nextCategoryId] = entries
+      .map((entry) => {
+        const nextEntryId = String(entry?.id || "").trim();
+        const nextEntryLabel = String(entry?.label || "").trim();
+
+        if (!nextEntryId || !nextEntryLabel) {
+          return null;
+        }
+
+        return {
+          id: nextEntryId,
+          label: nextEntryLabel,
+        };
+      })
+      .filter(Boolean);
+  });
+
+  return nextOptions;
+}
+
+function humanizeTaxonomyId(value) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[-_]+/g, " ");
+
+  if (!normalized) {
+    return "Sans nom";
+  }
+
+  return normalized.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+}
+
+function slugifyTaxonomyId(value, fallback = "categorie") {
+  const normalized = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || fallback;
+}
+
+function getOrderedCategoryEntries(categoryLabels) {
+  const entries = Object.entries(categoryLabels);
+  const defaultEntries = DEFAULT_CATEGORY_ORDER.filter((categoryId) => categoryLabels[categoryId]).map(
+    (categoryId) => [categoryId, categoryLabels[categoryId]],
+  );
+  const customEntries = entries
+    .filter(([categoryId]) => !DEFAULT_CATEGORY_ORDER.includes(categoryId))
+    .sort(([, leftLabel], [, rightLabel]) => leftLabel.localeCompare(rightLabel, "fr"));
+
+  return [...defaultEntries, ...customEntries];
+}
+
+function mergeTaxonomyWithProducts(categoryLabels, categoryOptions, products) {
+  const nextLabels = cloneCategoryLabels(categoryLabels);
+  const nextOptions = cloneCategorySubcategoryOptions(categoryOptions);
+
+  products.forEach((product) => {
+    const categoryId = String(product?.c || product?.category || "").trim();
+
+    if (!categoryId) {
+      return;
+    }
+
+    if (!nextLabels[categoryId]) {
+      nextLabels[categoryId] = humanizeTaxonomyId(categoryId);
+    }
+
+    if (!nextOptions[categoryId]) {
+      nextOptions[categoryId] = [];
+    }
+
+    const subcategoryId = String(product?.sc || product?.subcategory || "").trim();
+
+    if (!subcategoryId) {
+      return;
+    }
+
+    if (!nextOptions[categoryId].some((option) => option.id === subcategoryId)) {
+      nextOptions[categoryId] = [
+        ...nextOptions[categoryId],
+        { id: subcategoryId, label: humanizeTaxonomyId(subcategoryId) },
+      ];
+    }
+  });
+
+  return {
+    labels: nextLabels,
+    options: nextOptions,
+  };
+}
+
+function createEmptyCategoryForm() {
+  return {
+    ...EMPTY_CATEGORY_FORM,
+    subcategories: EMPTY_CATEGORY_FORM.subcategories.map((entry) => ({ ...entry })),
+  };
+}
 
 function normalizePersistedSettings(settings) {
   if (!settings) {
@@ -459,10 +591,14 @@ async function requestJson(url, options = {}) {
   return payload;
 }
 
-function resolveProductFormSubcategory(category, subcategory) {
-  return isSubcategoryForCategory(category, subcategory)
+function resolveProductFormSubcategory(
+  category,
+  subcategory,
+  categoryOptions = CATEGORY_SUBCATEGORY_OPTIONS,
+) {
+  return isSubcategoryForCategory(category, subcategory, categoryOptions)
     ? subcategory
-    : getDefaultSubcategory(category);
+    : getDefaultSubcategory(category, categoryOptions);
 }
 
 function readFileAsDataUrl(file) {
@@ -517,6 +653,10 @@ export default function Home() {
   const productsRef = useRef(null);
   const footerTapTimerRef = useRef(null);
   const footerTapCountRef = useRef(0);
+  const taxonomyRef = useRef({
+    labels: cloneCategoryLabels(),
+    options: cloneCategorySubcategoryOptions(),
+  });
   const [hydrated, setHydrated] = useState(false);
   const [currentPage, setCurrentPage] = useState("shop");
   const [activeTab, setActiveTab] = useState("tous");
@@ -525,6 +665,10 @@ export default function Home() {
   const [orders, setOrders] = useState([]);
   const [cart, setCart] = useState([]);
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
+  const [categoryLabels, setCategoryLabels] = useState(() => cloneCategoryLabels());
+  const [categorySubcategoryOptions, setCategorySubcategoryOptions] = useState(() =>
+    cloneCategorySubcategoryOptions(),
+  );
   const [quantityById, setQuantityById] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -538,6 +682,9 @@ export default function Home() {
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT_FORM);
   const [editingProductId, setEditingProductId] = useState(null);
+  const [categoryFormOpen, setCategoryFormOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState(createEmptyCategoryForm);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [toastMessage, setToastMessage] = useState("");
   const [productsSource, setProductsSource] = useState("local");
   const [ordersSource, setOrdersSource] = useState("local");
@@ -545,6 +692,13 @@ export default function Home() {
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [productImageUploading, setProductImageUploading] = useState(false);
+
+  useEffect(() => {
+    taxonomyRef.current = {
+      labels: categoryLabels,
+      options: categorySubcategoryOptions,
+    };
+  }, [categoryLabels, categorySubcategoryOptions]);
 
   useEffect(() => {
     const savedAdminAccess = window.localStorage.getItem(ADMIN_ACCESS_KEY);
@@ -559,9 +713,24 @@ export default function Home() {
       }
 
       const parsed = JSON.parse(raw);
+      const nextCategoryLabels = normalizeStoredCategoryLabels(parsed.taxonomy?.labels);
+      const nextCategorySubcategoryOptions = normalizeStoredCategorySubcategoryOptions(
+        parsed.taxonomy?.options,
+      );
+
+      setCategoryLabels(nextCategoryLabels);
+      setCategorySubcategoryOptions(nextCategorySubcategoryOptions);
 
       if (Array.isArray(parsed.products) && parsed.products.length) {
-        setProducts(normalizeProducts(parsed.products));
+        const mergedTaxonomy = mergeTaxonomyWithProducts(
+          nextCategoryLabels,
+          nextCategorySubcategoryOptions,
+          parsed.products,
+        );
+
+        setCategoryLabels(mergedTaxonomy.labels);
+        setCategorySubcategoryOptions(mergedTaxonomy.options);
+        setProducts(normalizeProducts(parsed.products, mergedTaxonomy.options));
       }
 
       if (Array.isArray(parsed.orders)) {
@@ -598,10 +767,22 @@ export default function Home() {
       orders,
       cart,
       settings,
+      taxonomy: {
+        labels: categoryLabels,
+        options: categorySubcategoryOptions,
+      },
     });
 
     window.localStorage.setItem(STORAGE_KEY, payload);
-  }, [cart, hydrated, orders, products, settings]);
+  }, [
+    cart,
+    categoryLabels,
+    categorySubcategoryOptions,
+    hydrated,
+    orders,
+    products,
+    settings,
+  ]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -655,7 +836,15 @@ export default function Home() {
         }
 
         if (Array.isArray(payload.products) && payload.products.length) {
-          setProducts(normalizeProducts(payload.products));
+          const mergedTaxonomy = mergeTaxonomyWithProducts(
+            taxonomyRef.current.labels,
+            taxonomyRef.current.options,
+            payload.products,
+          );
+
+          setCategoryLabels(mergedTaxonomy.labels);
+          setCategorySubcategoryOptions(mergedTaxonomy.options);
+          setProducts(normalizeProducts(payload.products, mergedTaxonomy.options));
         }
 
         setProductsSource(payload.source || "local");
@@ -720,7 +909,11 @@ export default function Home() {
       return;
     }
 
-    const visibleSubcategories = getVisibleSubcategories(products, activeTab);
+    const visibleSubcategories = getVisibleSubcategories(
+      products,
+      activeTab,
+      categorySubcategoryOptions,
+    );
     const activeSubcategoryStillVisible = visibleSubcategories.some(
       (subcategory) => subcategory.id === activeSubcategory,
     );
@@ -728,15 +921,24 @@ export default function Home() {
     if (!activeSubcategoryStillVisible) {
       setActiveSubcategory("tous");
     }
-  }, [activeSubcategory, activeTab, products]);
+  }, [activeSubcategory, activeTab, categorySubcategoryOptions, products]);
 
   const whatsappDigits = getWhatsappDigits(settings.whatsappDisplay);
   const whatsappBaseLink = whatsappDigits ? `https://wa.me/${whatsappDigits}` : "#";
   const whatsappContactLink = `${whatsappBaseLink}?text=${encodeURIComponent(
     "Bonjour, je souhaite obtenir des informations sur vos produits.",
   )}`;
+  const orderedCategoryEntries = getOrderedCategoryEntries(categoryLabels);
+  const categoryCards = [
+    { id: "tous", label: "Tout voir" },
+    ...orderedCategoryEntries.map(([categoryId, label]) => ({ id: categoryId, label })),
+  ];
+  const productTabs = categoryCards;
+  const subcategoryLabels = buildSubcategoryLabels(categorySubcategoryOptions);
   const visibleSubcategories =
-    activeTab === "tous" ? [] : getVisibleSubcategories(products, activeTab);
+    activeTab === "tous"
+      ? []
+      : getVisibleSubcategories(products, activeTab, categorySubcategoryOptions);
   const filteredProducts = products.filter((product) => {
     if (activeTab !== "tous" && product.c !== activeTab) {
       return false;
@@ -757,8 +959,8 @@ export default function Home() {
     .filter((order) => order.status !== "cancel")
     .reduce((sum, order) => sum + order.total, 0);
   const adminDate = getAdminDate();
-  const categoryCounts = Object.keys(CATEGORY_LABELS).reduce((accumulator, key) => {
-    accumulator[key] = products.filter((product) => product.c === key).length;
+  const categoryCounts = orderedCategoryEntries.reduce((accumulator, [categoryId]) => {
+    accumulator[categoryId] = products.filter((product) => product.c === categoryId).length;
     return accumulator;
   }, {});
   const availableCategoryIds = new Set(
@@ -766,29 +968,36 @@ export default function Home() {
       .filter(([, count]) => count > 0)
       .map(([category]) => category),
   );
-  const categorySubcategorySummaries = Object.entries(CATEGORY_LABELS).map(([category, label]) => {
-    const activeSubcategories = getVisibleSubcategories(products, category).map((subcategory) => ({
+  const activeTabIsAvailable =
+    activeTab === "tous" || (Boolean(categoryLabels[activeTab]) && availableCategoryIds.has(activeTab));
+  const categorySubcategorySummaries = orderedCategoryEntries.map(([categoryId, label]) => {
+    const activeSubcategories = getVisibleSubcategories(
+      products,
+      categoryId,
+      categorySubcategoryOptions,
+    ).map((subcategory) => ({
       ...subcategory,
       count: products.filter(
-        (product) => product.c === category && product.sc === subcategory.id,
+        (product) => product.c === categoryId && product.sc === subcategory.id,
       ).length,
     }));
 
     return {
-      category,
+      category: categoryId,
       label,
-      count: categoryCounts[category],
+      count: categoryCounts[categoryId],
       activeSubcategories,
     };
   });
-  const productFormSubcategoryOptions = CATEGORY_SUBCATEGORY_OPTIONS[productForm.category] || [];
+  const firstCategoryId = orderedCategoryEntries[0]?.[0] || EMPTY_PRODUCT_FORM.category;
+  const productFormSubcategoryOptions = categorySubcategoryOptions[productForm.category] || [];
 
   useEffect(() => {
-    if (activeTab !== "tous" && !availableCategoryIds.has(activeTab)) {
+    if (!activeTabIsAvailable) {
       setActiveTab("tous");
       setActiveSubcategory("tous");
     }
-  }, [activeTab, products]);
+  }, [activeTabIsAvailable]);
 
   function showToast(message) {
     setToastMessage(message);
@@ -1085,7 +1294,11 @@ export default function Home() {
   function openProductForm(productId = null) {
     if (productId === null) {
       setEditingProductId(null);
-      setProductForm(EMPTY_PRODUCT_FORM);
+      setProductForm({
+        ...EMPTY_PRODUCT_FORM,
+        category: firstCategoryId,
+        subcategory: getDefaultSubcategory(firstCategoryId, categorySubcategoryOptions),
+      });
       setProductFormOpen(true);
       return;
     }
@@ -1100,7 +1313,7 @@ export default function Home() {
     setProductForm({
       name: product.n,
       category: product.c,
-      subcategory: resolveProductFormSubcategory(product.c, product.sc),
+      subcategory: resolveProductFormSubcategory(product.c, product.sc, categorySubcategoryOptions),
       emoji: product.e,
       image: product.i || "",
       description: product.d,
@@ -1113,7 +1326,205 @@ export default function Home() {
   function closeProductForm() {
     setProductFormOpen(false);
     setEditingProductId(null);
-    setProductForm(EMPTY_PRODUCT_FORM);
+    setProductForm({
+      ...EMPTY_PRODUCT_FORM,
+      category: firstCategoryId,
+      subcategory: getDefaultSubcategory(firstCategoryId, categorySubcategoryOptions),
+    });
+  }
+
+  function openCategoryForm(categoryId = null) {
+    if (categoryId === null) {
+      setEditingCategoryId(null);
+      setCategoryForm(createEmptyCategoryForm());
+      setCategoryFormOpen(true);
+      return;
+    }
+
+    if (!categoryLabels[categoryId]) {
+      return;
+    }
+
+    setEditingCategoryId(categoryId);
+    setCategoryForm({
+      name: categoryLabels[categoryId],
+      subcategories:
+        categorySubcategoryOptions[categoryId]?.length
+          ? categorySubcategoryOptions[categoryId].map((entry) => ({ ...entry }))
+          : createEmptyCategoryForm().subcategories,
+    });
+    setCategoryFormOpen(true);
+  }
+
+  function closeCategoryForm() {
+    setCategoryFormOpen(false);
+    setEditingCategoryId(null);
+    setCategoryForm(createEmptyCategoryForm());
+  }
+
+  function handleCategorySubcategoryChange(index, value) {
+    setCategoryForm((current) => ({
+      ...current,
+      subcategories: current.subcategories.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, label: value } : entry,
+      ),
+    }));
+  }
+
+  function addCategorySubcategoryField() {
+    setCategoryForm((current) => ({
+      ...current,
+      subcategories: [...current.subcategories, { id: "", label: "" }],
+    }));
+  }
+
+  function removeCategorySubcategoryField(index) {
+    setCategoryForm((current) => {
+      if (current.subcategories.length === 1) {
+        return createEmptyCategoryForm();
+      }
+
+      return {
+        ...current,
+        subcategories: current.subcategories.filter((_, entryIndex) => entryIndex !== index),
+      };
+    });
+  }
+
+  function saveCategory() {
+    const name = categoryForm.name.trim();
+    const nextRawSubcategories = categoryForm.subcategories
+      .map((entry) => ({
+        id: String(entry.id || "").trim(),
+        label: String(entry.label || "").trim(),
+      }))
+      .filter((entry) => entry.label);
+
+    if (!name || !nextRawSubcategories.length) {
+      showToast("Ajoutez un nom et au moins une sous-catégorie");
+      return;
+    }
+
+    const categoryId = (() => {
+      if (editingCategoryId) {
+        return editingCategoryId;
+      }
+
+      const baseId = slugifyTaxonomyId(name);
+      let candidate = baseId;
+      let index = 2;
+
+      while (categoryLabels[candidate]) {
+        candidate = `${baseId}-${index}`;
+        index += 1;
+      }
+
+      return candidate;
+    })();
+
+    const usedSubcategoryIds = new Set();
+    const nextSubcategories = nextRawSubcategories.map((entry, index) => {
+      const baseId = entry.id || slugifyTaxonomyId(entry.label, `sous-categorie-${index + 1}`);
+      let candidate = baseId;
+      let suffix = 2;
+
+      while (usedSubcategoryIds.has(candidate)) {
+        candidate = `${baseId}-${suffix}`;
+        suffix += 1;
+      }
+
+      usedSubcategoryIds.add(candidate);
+
+      return {
+        id: candidate,
+        label: entry.label,
+      };
+    });
+
+    const previousSubcategories = editingCategoryId
+      ? categorySubcategoryOptions[editingCategoryId] || []
+      : [];
+    const removedSubcategoryIds = previousSubcategories
+      .map((entry) => entry.id)
+      .filter((subcategoryId) => !nextSubcategories.some((entry) => entry.id === subcategoryId));
+    const blockedSubcategoryId = removedSubcategoryIds.find((subcategoryId) =>
+      products.some((product) => product.c === editingCategoryId && product.sc === subcategoryId),
+    );
+
+    if (blockedSubcategoryId) {
+      showToast("Déplace d'abord les produits liés à cette sous-catégorie");
+      return;
+    }
+
+    setCategoryLabels((current) => ({
+      ...current,
+      [categoryId]: name,
+    }));
+    setCategorySubcategoryOptions((current) => ({
+      ...current,
+      [categoryId]: nextSubcategories,
+    }));
+
+    if (productForm.category === categoryId) {
+      setProductForm((current) => ({
+        ...current,
+        subcategory: resolveProductFormSubcategory(
+          categoryId,
+          current.subcategory,
+          {
+            ...categorySubcategoryOptions,
+            [categoryId]: nextSubcategories,
+          },
+        ),
+      }));
+    }
+
+    closeCategoryForm();
+    showToast(editingCategoryId ? "Catégorie mise à jour" : "Catégorie ajoutée");
+  }
+
+  function deleteCategory(categoryId) {
+    if (products.some((product) => product.c === categoryId)) {
+      showToast("Supprime ou déplace d'abord les produits de cette catégorie");
+      return;
+    }
+
+    if (!window.confirm("Supprimer cette catégorie ?")) {
+      return;
+    }
+
+    const fallbackCategoryId =
+      orderedCategoryEntries.find(([entryId]) => entryId !== categoryId)?.[0] || firstCategoryId;
+
+    setCategoryLabels((current) => {
+      const nextLabels = { ...current };
+      delete nextLabels[categoryId];
+      return nextLabels;
+    });
+    setCategorySubcategoryOptions((current) => {
+      const nextOptions = { ...current };
+      delete nextOptions[categoryId];
+      return nextOptions;
+    });
+
+    if (activeTab === categoryId) {
+      setActiveTab("tous");
+      setActiveSubcategory("tous");
+    }
+
+    if (productForm.category === categoryId) {
+      setProductForm((current) => ({
+        ...current,
+        category: fallbackCategoryId,
+        subcategory: getDefaultSubcategory(fallbackCategoryId, categorySubcategoryOptions),
+      }));
+    }
+
+    if (editingCategoryId === categoryId) {
+      closeCategoryForm();
+    }
+
+    showToast("Catégorie supprimée");
   }
 
   async function handleProductImageUpload(event) {
@@ -1158,7 +1569,7 @@ export default function Home() {
       d: productForm.description.trim(),
       p: price,
       s: stock,
-    });
+    }, categorySubcategoryOptions);
 
     try {
       const payload = await requestJson("/api/products", {
@@ -1169,11 +1580,12 @@ export default function Home() {
 
       setProducts((current) => {
         if (editingProductId === null) {
-          return normalizeProducts([...current, savedProduct]);
+          return normalizeProducts([...current, savedProduct], categorySubcategoryOptions);
         }
 
         return normalizeProducts(
           current.map((item) => (item.id === editingProductId ? savedProduct : item)),
+          categorySubcategoryOptions,
         );
       });
 
@@ -1442,7 +1854,7 @@ export default function Home() {
             Nos <em>Catégories</em>
           </div>
           <div className="cats-grid">
-            {CATEGORY_CARDS.map((category) => {
+            {categoryCards.map((category) => {
               const isAvailable =
                 category.id === "tous" ? Boolean(products.length) : availableCategoryIds.has(category.id);
 
@@ -1477,7 +1889,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    {CATEGORY_LABELS[activeTab]} <em>par sous-catégorie</em>
+                    {categoryLabels[activeTab] || activeTab} <em>par sous-catégorie</em>
                   </>
                 )}
               </div>
@@ -1485,14 +1897,14 @@ export default function Home() {
                 <div className="sec-sub">
                   {activeSubcategory === "tous"
                     ? "Affiche toutes les sous-catégories de cette gamme."
-                    : `Filtre actif : ${SUBCATEGORY_LABELS[activeSubcategory] || activeSubcategory}.`}
+                    : `Filtre actif : ${subcategoryLabels[activeSubcategory] || activeSubcategory}.`}
                 </div>
               ) : null}
             </div>
           </div>
 
           <div className="tabs rv" id="tabs">
-            {PRODUCT_TABS.map((tab) => (
+            {productTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -1554,9 +1966,9 @@ export default function Home() {
                     </div>
                     <div className="pbody">
                       <div className="pmeta">
-                        <span className="pbadge">{CATEGORY_LABELS[product.c] || product.c}</span>
+                        <span className="pbadge">{categoryLabels[product.c] || product.c}</span>
                         <span className="pbadge alt">
-                          {SUBCATEGORY_LABELS[product.sc] || product.sc}
+                          {subcategoryLabels[product.sc] || product.sc}
                         </span>
                       </div>
                       <div className="pname">{product.n}</div>
@@ -1638,58 +2050,12 @@ export default function Home() {
           <div className="fg">
             <div className="fb">
               <span className="footer-logo">{settings.shopName}</span>
-              <p>
-                Boutique de soins et d&apos;hygiène. Catalogue structuré, références
-                sélectionnées et livraison partout au Sénégal.
-              </p>
-              <div className="fb-soc">
-                <a href={whatsappBaseLink} target="_blank" rel="noreferrer">
-                  <Icon name="whatsapp" />
-                  WhatsApp
-                </a>
-                <a href={settings.instagramUrl} target="_blank" rel="noreferrer">
-                  <Icon name="instagram" />
-                  Instagram
-                </a>
-                <a href={settings.facebookUrl} target="_blank" rel="noreferrer">
-                  <Icon name="facebook" />
-                  Facebook
-                </a>
-                <a href={settings.tiktokUrl} target="_blank" rel="noreferrer">
-                  <Icon name="tiktok" />
-                  TikTok
-                </a>
+              <p>Boutique de soins et d&apos;hygiène avec commande simple sur WhatsApp.</p>
+              <div className="footer-meta">
+                <span>{settings.whatsappDisplay}</span>
+                <span>Livraison au Sénégal</span>
+                <span>Wave · Orange Money · Livraison</span>
               </div>
-            </div>
-
-            <div className="fc">
-              <h4>Catégories</h4>
-              <ul>
-                {Object.values(CATEGORY_LABELS).map((label) => (
-                  <li key={label}>{label}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="fc">
-              <h4>Livraison</h4>
-              <ul>
-                <li>Dakar — {formatPrice(settings.shippingDakar)} FCFA</li>
-                <li>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</li>
-                <li>Dakar — 30 à 45 min</li>
-                <li>Livraison partout au Sénégal</li>
-              </ul>
-            </div>
-
-            <div className="fc">
-              <h4>Contact</h4>
-              <ul>
-                <li>{settings.whatsappDisplay}</li>
-                <li>Wave</li>
-                <li>Orange Money</li>
-                <li>Paiement à la livraison</li>
-                <li>WhatsApp Business</li>
-              </ul>
             </div>
           </div>
 
@@ -2132,30 +2498,34 @@ export default function Home() {
 
                       return (
                         <tr key={product.id}>
-                        <td>
-                          <span className="td-name">
-                            {product.i ? (
-                              <span className="td-thumb-wrap">
-                                <SmartImage
-                                  src={product.i}
-                                  alt={product.n}
-                                  className="td-thumb"
-                                  sizes="42px"
-                                />
-                              </span>
-                            ) : (
-                              <span className="td-fallback">{getProductFallbackLabel(product.n)}</span>
-                            )}
+                          <td data-label="Produit">
+                            <span className="td-name">
+                              {product.i ? (
+                                <span className="td-thumb-wrap">
+                                  <SmartImage
+                                    src={product.i}
+                                    alt={product.n}
+                                    className="td-thumb"
+                                    sizes="42px"
+                                  />
+                                </span>
+                              ) : (
+                                <span className="td-fallback">{getProductFallbackLabel(product.n)}</span>
+                              )}
                               <span className="td-text">{product.n}</span>
                             </span>
                           </td>
-                          <td>{CATEGORY_LABELS[product.c] || product.c}</td>
-                          <td>{SUBCATEGORY_LABELS[product.sc] || product.sc}</td>
-                          <td className="td-price">{formatPrice(product.p)} F</td>
-                          <td>
+                          <td data-label="Catégorie">{categoryLabels[product.c] || product.c}</td>
+                          <td data-label="Sous-catégorie">
+                            {subcategoryLabels[product.sc] || product.sc}
+                          </td>
+                          <td data-label="Prix" className="td-price">
+                            {formatPrice(product.p)} F
+                          </td>
+                          <td data-label="Disponibilité">
                             <span className={cn("td-badge", stockState.tone)}>{stockState.label}</span>
                           </td>
-                          <td>
+                          <td data-label="Actions">
                             <div className="tbl-actions">
                               <button
                                 type="button"
@@ -2186,9 +2556,13 @@ export default function Home() {
             <div className={cn("adm-panel", adminPanel === "categories" && "on")}>
               <div className="panel-hd">
                 <h2>Catégories</h2>
+                <button type="button" className="btn-add" onClick={() => openCategoryForm()}>
+                  <Icon name="plus" />
+                  Ajouter
+                </button>
               </div>
               <div className="panel-note">
-                Chaque catégorie est désormais détaillée avec ses sous-catégories actives.
+                Ajoute, renomme et structure tes catégories directement depuis l&apos;admin.
               </div>
               <div className="table-scroll">
                 <table className="atbl">
@@ -2197,12 +2571,13 @@ export default function Home() {
                       <th>Catégorie</th>
                       <th>Sous-catégories</th>
                       <th>Produits</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {categorySubcategorySummaries.map((summary) => (
                       <tr key={summary.category}>
-                        <td>
+                        <td data-label="Catégorie">
                           <div className="td-stack">
                             <strong>{summary.label}</strong>
                             <span>
@@ -2212,7 +2587,7 @@ export default function Home() {
                             </span>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Sous-catégories">
                           {summary.activeSubcategories.length ? (
                             <div className="td-tags">
                               {summary.activeSubcategories.map((subcategory) => (
@@ -2225,7 +2600,27 @@ export default function Home() {
                             <span className="td-muted">Aucun produit</span>
                           )}
                         </td>
-                        <td>{summary.count}</td>
+                        <td data-label="Produits">{summary.count}</td>
+                        <td data-label="Actions">
+                          <div className="tbl-actions">
+                            <button
+                              type="button"
+                              className="tbl-btn"
+                              onClick={() => openCategoryForm(summary.category)}
+                            >
+                              <Icon name="edit" />
+                              Modifier
+                            </button>
+                            <button
+                              type="button"
+                              className="tbl-btn del"
+                              onClick={() => deleteCategory(summary.category)}
+                            >
+                              <Icon name="trash" />
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -2349,13 +2744,14 @@ export default function Home() {
                       subcategory: resolveProductFormSubcategory(
                         nextCategory,
                         current.subcategory,
+                        categorySubcategoryOptions,
                       ),
                     };
                   })
                 }
               >
-                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
+                {orderedCategoryEntries.map(([categoryId, label]) => (
+                  <option key={categoryId} value={categoryId}>
                     {label}
                   </option>
                 ))}
@@ -2460,6 +2856,71 @@ export default function Home() {
               Annuler
             </button>
             <button type="button" className="btn-next" onClick={saveProduct}>
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={cn("pform-ov", categoryFormOpen && "on")} onClick={closeCategoryForm} />
+      <div className={cn("pform", categoryFormOpen && "on")}>
+        <div className="pform-hd">
+          <h3>{editingCategoryId === null ? "Ajouter une catégorie" : "Modifier une catégorie"}</h3>
+          <button type="button" className="mo-x" onClick={closeCategoryForm}>
+            ✕
+          </button>
+        </div>
+
+        <div className="pform-body">
+          <label className="flbl">Nom de la catégorie *</label>
+          <input
+            className="finput"
+            placeholder="ex: Hygiène intime"
+            value={categoryForm.name}
+            onChange={(event) =>
+              setCategoryForm((current) => ({ ...current, name: event.target.value }))
+            }
+          />
+
+          <label className="flbl">Sous-catégories *</label>
+          <div className="category-form-help">
+            Tu peux renommer les sous-catégories existantes et en ajouter de nouvelles.
+          </div>
+          <div className="category-subcategory-list">
+            {categoryForm.subcategories.map((subcategory, index) => (
+              <div key={`${subcategory.id || "new"}-${index}`} className="category-subcategory-row">
+                <input
+                  className="finput"
+                  placeholder="ex: Gel intime"
+                  value={subcategory.label}
+                  onChange={(event) => handleCategorySubcategoryChange(index, event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="tbl-btn del category-subcategory-remove"
+                  onClick={() => removeCategorySubcategoryField(index)}
+                >
+                  <Icon name="trash" />
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="btn-add category-subcategory-add"
+            onClick={addCategorySubcategoryField}
+          >
+            <Icon name="plus" />
+            Ajouter une sous-catégorie
+          </button>
+
+          <div className="mo-nav form-nav">
+            <button type="button" className="btn-prev" onClick={closeCategoryForm}>
+              Annuler
+            </button>
+            <button type="button" className="btn-next" onClick={saveCategory}>
               Enregistrer
             </button>
           </div>
