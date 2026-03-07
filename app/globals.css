@@ -715,9 +715,6 @@ header {
   border-radius: 10px;
   overflow: hidden;
   transition: all 0.3s;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
 }
 
 .pcard:hover {
@@ -761,9 +758,6 @@ header {
 
 .pbody {
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
 }
 
 .pmeta {
@@ -810,7 +804,6 @@ header {
 .psep {
   height: 1px;
   background: var(--border);
-  margin-top: auto;
   margin-bottom: 12px;
 }
 
