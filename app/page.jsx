@@ -1232,14 +1232,14 @@ export default function Home() {
       <div id="shopPage" className={cn("page", currentPage === "shop" && "active")}>
         <div className="ann">
           <div className="ann-t">
-            <span>Dakar — 30 à 45 min dès {formatPrice(settings.shippingDakar)} FCFA</span>
-            <span>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</span>
-            <span>Wave · Orange Money · Paiement à la livraison</span>
-            <span>Catalogue disponible en ligne</span>
-            <span>Dakar — 30 à 45 min dès {formatPrice(settings.shippingDakar)} FCFA</span>
-            <span>Hors Dakar — {formatPrice(settings.shippingOutside)} FCFA</span>
-            <span>Wave · Orange Money · Paiement à la livraison</span>
-            <span>Catalogue disponible en ligne</span>
+            <span>Des soins sélectionnés pour le visage, le corps et les cheveux</span>
+            <span>Des textures agréables, des routines claires et des références reconnues</span>
+            <span>Hydratation, éclat, réparation et entretien au quotidien</span>
+            <span>Des produits choisis pour vous aider à trouver plus facilement le bon soin</span>
+            <span>Des soins sélectionnés pour le visage, le corps et les cheveux</span>
+            <span>Des textures agréables, des routines claires et des références reconnues</span>
+            <span>Hydratation, éclat, réparation et entretien au quotidien</span>
+            <span>Des produits choisis pour vous aider à trouver plus facilement le bon soin</span>
           </div>
         </div>
 
