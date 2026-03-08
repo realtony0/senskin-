@@ -41,26 +41,24 @@ export async function GET() {
           source: "supabase",
         });
       } catch (fallbackError) {
-        return NextResponse.json(
-          {
-            error:
-              fallbackError.message ||
-              error.message ||
-              "Unable to fetch orders from database or Supabase.",
-          },
-          { status: 500 },
-        );
+        return NextResponse.json({
+          orders: [],
+          source: "local",
+          warning:
+            fallbackError.message ||
+            error.message ||
+            "Unable to fetch orders from database or Supabase.",
+        });
       }
     }
 
-    return NextResponse.json(
-      {
-        error:
-          error.message ||
-          "Unable to fetch orders. A working DATABASE_URL or pooled connection is required.",
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      orders: [],
+      source: "local",
+      warning:
+        error.message ||
+        "Unable to fetch orders. A working DATABASE_URL or pooled connection is required.",
+    });
   }
 }
 
