@@ -155,7 +155,11 @@ function humanizeTaxonomyId(value) {
     return "Sans nom";
   }
 
-  return normalized.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+  return normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
 }
 
 function slugifyTaxonomyId(value, fallback = "categorie") {
