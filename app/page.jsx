@@ -594,6 +594,7 @@ function getAdminDate() {
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: "same-origin",
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
@@ -903,7 +904,7 @@ export default function Home({ routeMode = "shop" } = {}) {
   }, []);
 
   useEffect(() => {
-    if (currentPage !== "admin") {
+    if (currentPage !== "admin" || !adminUnlocked) {
       return;
     }
 
@@ -938,7 +939,7 @@ export default function Home({ routeMode = "shop" } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [currentPage]);
+  }, [adminUnlocked, currentPage]);
 
   useEffect(() => {
     if (activeTab === "tous" || activeSubcategory === "tous") {
@@ -1036,16 +1037,38 @@ export default function Home({ routeMode = "shop" } = {}) {
   }, [activeTabIsAvailable]);
 
   useEffect(() => {
-    if (!isAdminRoute || !hydrated || adminUnlocked || adminRouteInitRef.current) {
+    if (!isAdminRoute || !hydrated || adminRouteInitRef.current) {
       return;
     }
 
     adminRouteInitRef.current = true;
-    void requestAdminAccess({ redirectToShopOnCancel: true });
+    void verifyOrRequestAdminAccess();
   }, [adminUnlocked, hydrated, isAdminRoute]);
 
   function showToast(message) {
     setToastMessage(message);
+  }
+
+  function clearStoredAdminAccess() {
+    try {
+      window.localStorage.removeItem(ADMIN_ACCESS_KEY);
+    } catch {}
+  }
+
+  async function verifyOrRequestAdminAccess() {
+    if (adminUnlocked) {
+      try {
+        await requestJson("/api/admin/session");
+        showPage("admin");
+        return true;
+      } catch {
+        setAdminUnlocked(false);
+        clearStoredAdminAccess();
+        showToast("Session admin expirée. Reconnectez-vous.");
+      }
+    }
+
+    return requestAdminAccess({ redirectToShopOnCancel: true });
   }
 
   function navigateTo(path) {
@@ -1098,6 +1121,8 @@ export default function Home({ routeMode = "shop" } = {}) {
       showPage("admin");
       return true;
     } catch (error) {
+      setAdminUnlocked(false);
+      clearStoredAdminAccess();
       showToast(error.message || "Code administrateur incorrect");
       return false;
     }

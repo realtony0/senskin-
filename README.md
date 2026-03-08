@@ -33,9 +33,11 @@ Le site sera disponible sur `http://localhost:3000`.
 
 1. Importer le depot dans Vercel.
 2. Ajouter `DATABASE_URL` si tu as un host Postgres valide.
-3. Ajouter aussi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`.
-4. Laisser Vercel detecter automatiquement `Next.js`.
-5. Deployer.
+3. Ajouter `ADMIN_ACCESS_CODE` (code d'acces admin).
+4. Ajouter `ADMIN_SESSION_SECRET` (secret long et different du code admin).
+5. Ajouter aussi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`.
+6. Laisser Vercel detecter automatiquement `Next.js`.
+7. Deployer.
 
 ## Reference
 

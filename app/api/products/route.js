@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminSession } from "@/lib/admin-auth";
 import { query } from "@/lib/db";
 import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
 import { mapProductPayload, mapProductRow } from "@/lib/supabase/mappers";
@@ -236,6 +237,12 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const unauthorizedResponse = requireAdminSession(request);
+
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   const { product } = await request.json();
   const payload = mapProductPayload(product);
 
@@ -264,6 +271,12 @@ export async function POST(request) {
 }
 
 export async function PUT(request) {
+  const unauthorizedResponse = requireAdminSession(request);
+
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   const { product } = await request.json();
   const payload = mapProductPayload(product);
 
@@ -301,6 +314,12 @@ export async function PUT(request) {
 }
 
 export async function DELETE(request) {
+  const unauthorizedResponse = requireAdminSession(request);
+
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   const { id } = await request.json();
 
   try {

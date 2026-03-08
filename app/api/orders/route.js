@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminSession } from "@/lib/admin-auth";
 import { query } from "@/lib/db";
 import { mapOrderPayload, mapOrderRow } from "@/lib/supabase/mappers";
 import {
@@ -14,7 +15,13 @@ import {
 const ORDER_COLUMNS =
   "id, order_code, order_date, customer_name, customer_phone, customer_address, shipping_zone, payment_method, items, shipping_fee, total, status";
 
-export async function GET() {
+export async function GET(request) {
+  const unauthorizedResponse = requireAdminSession(request);
+
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   try {
     const { rows } = await query(
       `select ${ORDER_COLUMNS}
@@ -149,6 +156,12 @@ export async function POST(request) {
 }
 
 export async function PATCH(request) {
+  const unauthorizedResponse = requireAdminSession(request);
+
+  if (unauthorizedResponse) {
+    return unauthorizedResponse;
+  }
+
   const { id, status } = await request.json();
 
   try {
