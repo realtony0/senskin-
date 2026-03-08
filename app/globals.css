@@ -1963,6 +1963,47 @@ footer {
   transform: translateY(0);
 }
 
+#adminGatePage {
+  background: var(--off);
+  min-height: 100vh;
+}
+
+#adminGatePage.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+}
+
+.adm-gate-box {
+  width: min(480px, 100%);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 18px 52px rgba(123, 79, 46, 0.08);
+}
+
+.adm-gate-box h1 {
+  font-family: var(--font-serif), serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.adm-gate-box p {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink3);
+}
+
+.adm-gate-actions {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
 #adminPage {
   background: var(--off);
   min-height: 100vh;

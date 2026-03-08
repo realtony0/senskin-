@@ -654,16 +654,18 @@ async function optimizeImageFile(file) {
   return canvas.toDataURL(outputType, outputType === "image/png" ? undefined : 0.9);
 }
 
-export default function Home() {
+export default function Home({ routeMode = "shop" } = {}) {
+  const isAdminRoute = routeMode === "admin";
   const productsRef = useRef(null);
   const footerTapTimerRef = useRef(null);
   const footerTapCountRef = useRef(0);
+  const adminRouteInitRef = useRef(false);
   const taxonomyRef = useRef({
     labels: cloneCategoryLabels(),
     options: cloneCategorySubcategoryOptions(),
   });
   const [hydrated, setHydrated] = useState(false);
-  const [currentPage, setCurrentPage] = useState("shop");
+  const [currentPage, setCurrentPage] = useState(isAdminRoute ? "admin" : "shop");
   const [activeTab, setActiveTab] = useState("tous");
   const [activeSubcategory, setActiveSubcategory] = useState("tous");
   const [products, setProducts] = useState(() => normalizeProducts(INITIAL_PRODUCTS));
@@ -761,6 +763,10 @@ export default function Home() {
       setHydrated(true);
     }
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(isAdminRoute ? "admin" : "shop");
+  }, [isAdminRoute]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -1004,26 +1010,54 @@ export default function Home() {
     }
   }, [activeTabIsAvailable]);
 
+  useEffect(() => {
+    if (!isAdminRoute || !hydrated || adminUnlocked || adminRouteInitRef.current) {
+      return;
+    }
+
+    adminRouteInitRef.current = true;
+    void requestAdminAccess({ redirectToShopOnCancel: true });
+  }, [adminUnlocked, hydrated, isAdminRoute]);
+
   function showToast(message) {
     setToastMessage(message);
   }
 
+  function navigateTo(path) {
+    if (typeof window !== "undefined") {
+      window.location.assign(path);
+    }
+  }
+
   function showPage(page) {
+    if (page === "admin" && !isAdminRoute) {
+      navigateTo("/admin");
+      return;
+    }
+
+    if (page === "shop" && isAdminRoute) {
+      navigateTo("/");
+      return;
+    }
+
     setCurrentPage(page);
     setCartOpen(false);
     setCheckoutOpen(false);
   }
 
-  async function requestAdminAccess() {
+  async function requestAdminAccess({ redirectToShopOnCancel = false } = {}) {
     if (adminUnlocked) {
       showPage("admin");
-      return;
+      return true;
     }
 
     const code = window.prompt("Entrez le code administrateur");
 
     if (code === null) {
-      return;
+      if (redirectToShopOnCancel) {
+        navigateTo("/");
+      }
+      return false;
     }
 
     try {
@@ -1035,8 +1069,10 @@ export default function Home() {
       window.localStorage.setItem(ADMIN_ACCESS_KEY, "granted");
       showToast("Accès administrateur activé");
       showPage("admin");
+      return true;
     } catch (error) {
       showToast(error.message || "Code administrateur incorrect");
+      return false;
     }
   }
 
@@ -1646,7 +1682,7 @@ export default function Home() {
 
   return (
     <>
-      <div id="shopPage" className={cn("page", currentPage === "shop" && "active")}>
+      <div id="shopPage" className={cn("page", !isAdminRoute && currentPage === "shop" && "active")}>
         <div className="ann">
           <div className="ann-t">
             <span>Des soins sélectionnés pour le visage, le corps et les cheveux</span>
@@ -2366,7 +2402,26 @@ export default function Home() {
         </div>
       </div>
 
-      <div id="adminPage" className={cn("page", currentPage === "admin" && "active")}>
+      <div id="adminGatePage" className={cn("page", isAdminRoute && !adminUnlocked && "active")}>
+        <div className="adm-gate-box">
+          <h1>Espace administrateur</h1>
+          <p>Entrez le code administrateur pour accéder au tableau de bord.</p>
+          <div className="adm-gate-actions">
+            <button
+              type="button"
+              className="btn-main"
+              onClick={() => void requestAdminAccess({ redirectToShopOnCancel: true })}
+            >
+              Déverrouiller l&apos;admin
+            </button>
+            <button type="button" className="btn-sec" onClick={() => navigateTo("/")}>
+              Retour à la boutique
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="adminPage" className={cn("page", currentPage === "admin" && adminUnlocked && "active")}>
         <div className="adm-wrap">
           <aside className="adm-side">
             <div className="adm-logo">
