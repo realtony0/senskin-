@@ -246,6 +246,25 @@ function normalizePersistedSettings(settings) {
   };
 }
 
+function isStorageQuotaExceeded(error) {
+  if (!error) {
+    return false;
+  }
+
+  if (error instanceof DOMException) {
+    return (
+      error.code === 22 ||
+      error.code === 1014 ||
+      error.name === "QuotaExceededError" ||
+      error.name === "NS_ERROR_DOM_QUOTA_REACHED"
+    );
+  }
+
+  return String(error.message || "")
+    .toLowerCase()
+    .includes("quota");
+}
+
 function cn(...values) {
   return values.filter(Boolean).join(" ");
 }
@@ -657,9 +676,9 @@ async function optimizeImageFile(file) {
 export default function Home({ routeMode = "shop" } = {}) {
   const isAdminRoute = routeMode === "admin";
   const productsRef = useRef(null);
-  const footerTapTimerRef = useRef(null);
-  const footerTapCountRef = useRef(0);
   const adminRouteInitRef = useRef(false);
+  const storagePersistenceDisabledRef = useRef(false);
+  const storageWarningShownRef = useRef(false);
   const taxonomyRef = useRef({
     labels: cloneCategoryLabels(),
     options: cloneCategorySubcategoryOptions(),
@@ -708,9 +727,10 @@ export default function Home({ routeMode = "shop" } = {}) {
   }, [categoryLabels, categorySubcategoryOptions]);
 
   useEffect(() => {
-    const savedAdminAccess = window.localStorage.getItem(ADMIN_ACCESS_KEY);
+    let savedAdminAccess = null;
 
     try {
+      savedAdminAccess = window.localStorage.getItem(ADMIN_ACCESS_KEY);
       const raw = window.localStorage.getItem(STORAGE_KEY);
 
       if (!raw) {
@@ -754,10 +774,11 @@ export default function Home({ routeMode = "shop" } = {}) {
           ...normalizePersistedSettings(parsed.settings),
         }));
       }
-
       setAdminUnlocked(savedAdminAccess === "granted");
-    } catch {
-      // Ignore invalid persisted state and fall back to defaults.
+    } catch (error) {
+      if (isStorageQuotaExceeded(error)) {
+        storagePersistenceDisabledRef.current = true;
+      }
       setAdminUnlocked(savedAdminAccess === "granted");
     } finally {
       setHydrated(true);
@@ -784,7 +805,20 @@ export default function Home({ routeMode = "shop" } = {}) {
       },
     });
 
-    window.localStorage.setItem(STORAGE_KEY, payload);
+    if (storagePersistenceDisabledRef.current) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, payload);
+    } catch (error) {
+      storagePersistenceDisabledRef.current = true;
+
+      if (isStorageQuotaExceeded(error) && !storageWarningShownRef.current) {
+        storageWarningShownRef.current = true;
+        showToast("Stockage local saturé : les changements restent actifs sans sauvegarde locale.");
+      }
+    }
   }, [
     cart,
     categoryLabels,
@@ -825,15 +859,6 @@ export default function Home({ routeMode = "shop" } = {}) {
 
     return () => observer.disconnect();
   }, [activeSubcategory, activeTab, currentPage, products.length]);
-
-  useEffect(
-    () => () => {
-      if (footerTapTimerRef.current) {
-        window.clearTimeout(footerTapTimerRef.current);
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1066,7 +1091,9 @@ export default function Home({ routeMode = "shop" } = {}) {
         body: JSON.stringify({ code: code.trim() }),
       });
       setAdminUnlocked(true);
-      window.localStorage.setItem(ADMIN_ACCESS_KEY, "granted");
+      try {
+        window.localStorage.setItem(ADMIN_ACCESS_KEY, "granted");
+      } catch {}
       showToast("Accès administrateur activé");
       showPage("admin");
       return true;
@@ -1292,23 +1319,6 @@ export default function Home({ routeMode = "shop" } = {}) {
     }
 
     setCheckoutStep(nextStep);
-  }
-
-  function handleFooterTap() {
-    footerTapCountRef.current += 1;
-
-    if (footerTapTimerRef.current) {
-      window.clearTimeout(footerTapTimerRef.current);
-    }
-
-    footerTapTimerRef.current = window.setTimeout(() => {
-      footerTapCountRef.current = 0;
-    }, 3000);
-
-    if (footerTapCountRef.current >= 5) {
-      footerTapCountRef.current = 0;
-      void requestAdminAccess();
-    }
   }
 
   async function handleOrderStatus(orderId, status) {
@@ -2100,17 +2110,12 @@ export default function Home({ routeMode = "shop" } = {}) {
             </div>
           </div>
 
-          <div className="fbot" onClick={handleFooterTap}>
+          <div className="fbot">
             <span>© 2026 {settings.shopName} — {settings.tagline.toUpperCase()}</span>
             <span>DAKAR · SÉNÉGAL</span>
             <span>
               Conçu par{" "}
-              <a
-                href={MMB_WHATSAPP_LINK}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(event) => event.stopPropagation()}
-              >
+              <a href={MMB_WHATSAPP_LINK} target="_blank" rel="noreferrer">
                 Mmb
               </a>
             </span>
