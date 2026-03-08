@@ -1068,7 +1068,7 @@ export default function Home({ routeMode = "shop" } = {}) {
       }
     }
 
-    return requestAdminAccess({ redirectToShopOnCancel: true });
+    return requestAdminAccess({ redirectToShopOnCancel: true, forcePrompt: true });
   }
 
   function navigateTo(path) {
@@ -1093,8 +1093,8 @@ export default function Home({ routeMode = "shop" } = {}) {
     setCheckoutOpen(false);
   }
 
-  async function requestAdminAccess({ redirectToShopOnCancel = false } = {}) {
-    if (adminUnlocked) {
+  async function requestAdminAccess({ redirectToShopOnCancel = false, forcePrompt = false } = {}) {
+    if (adminUnlocked && !forcePrompt) {
       showPage("admin");
       return true;
     }
