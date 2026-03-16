@@ -698,12 +698,6 @@ header {
   height: 15px;
 }
 
-.hico.is-active {
-  background: rgba(123, 79, 46, 0.08);
-  border-color: var(--brown3);
-  color: var(--brown);
-}
-
 .tabs {
   display: flex;
   gap: 0;
