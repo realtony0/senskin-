@@ -497,6 +497,19 @@ function Icon({ name, className }) {
           <path d="m12 19-7-7 7-7" />
         </svg>
       );
+    case "search":
+      return (
+        <svg {...props}>
+          <circle cx="11" cy="11" r="7" />
+          <path d="m16.5 16.5 4 4" />
+        </svg>
+      );
+    case "close":
+      return (
+        <svg {...props}>
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -719,6 +732,9 @@ export default function Home({ routeMode = "shop" } = {}) {
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [productImageUploading, setProductImageUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     taxonomyRef.current = {
@@ -976,7 +992,17 @@ export default function Home({ routeMode = "shop" } = {}) {
     activeTab === "tous"
       ? []
       : getVisibleSubcategories(products, activeTab, categorySubcategoryOptions);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredProducts = products.filter((product) => {
+    if (normalizedSearch) {
+      const categoryLabel = (categoryLabels[product.c] || product.c || "").toLowerCase();
+      return (
+        (product.n || "").toLowerCase().includes(normalizedSearch) ||
+        (product.d || "").toLowerCase().includes(normalizedSearch) ||
+        categoryLabel.includes(normalizedSearch)
+      );
+    }
+
     if (activeTab !== "tous" && product.c !== activeTab) {
       return false;
     }
@@ -1799,6 +1825,25 @@ export default function Home({ routeMode = "shop" } = {}) {
             </div>
 
             <div className="hdr-r">
+              <button
+                type="button"
+                className={cn("hico", searchOpen && "is-active")}
+                aria-label="Rechercher un produit"
+                onClick={() => {
+                  setSearchOpen((open) => {
+                    const next = !open;
+                    if (!next) setSearchQuery("");
+                    else {
+                      setTimeout(() => searchInputRef.current?.focus(), 50);
+                      document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" });
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <Icon name="search" />
+                <span className="hico-label">Rechercher</span>
+              </button>
               <a
                 href={whatsappContactLink}
                 className="hico"
@@ -1959,7 +2004,11 @@ export default function Home({ routeMode = "shop" } = {}) {
             <div>
               <div className="sec-lbl">Notre sélection</div>
               <div className="sec-ttl">
-                {activeTab === "tous" ? (
+                {normalizedSearch ? (
+                  <>
+                    Résultats <em>de recherche</em>
+                  </>
+                ) : activeTab === "tous" ? (
                   <>
                     Tous nos <em>Soins</em>
                   </>
@@ -1969,7 +2018,13 @@ export default function Home({ routeMode = "shop" } = {}) {
                   </>
                 )}
               </div>
-              {activeTab !== "tous" ? (
+              {normalizedSearch ? (
+                <div className="sec-sub">
+                  {filteredProducts.length
+                    ? `${filteredProducts.length} produit${filteredProducts.length > 1 ? "s" : ""} pour « ${searchQuery.trim()} »`
+                    : `Aucun produit pour « ${searchQuery.trim()} »`}
+                </div>
+              ) : activeTab !== "tous" ? (
                 <div className="sec-sub">
                   {activeSubcategory === "tous"
                     ? "Affiche toutes les sous-catégories de cette gamme."
@@ -1978,6 +2033,36 @@ export default function Home({ routeMode = "shop" } = {}) {
               ) : null}
             </div>
           </div>
+
+          {searchOpen ? (
+            <div className="search-bar rv">
+              <div className="search-wrap">
+                <Icon name="search" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  className="search-input"
+                  placeholder="Rechercher un produit, une marque…"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  aria-label="Rechercher un produit"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    className="search-clear"
+                    aria-label="Effacer la recherche"
+                    onClick={() => {
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    <Icon name="close" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           <div className="tabs rv" id="tabs">
             {productTabs.map((tab) => (

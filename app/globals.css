@@ -630,6 +630,80 @@ header {
   max-width: none;
 }
 
+.search-bar {
+  margin-bottom: 24px;
+}
+
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--border2);
+  border-radius: 999px;
+  padding: 10px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-wrap:focus-within {
+  border-color: var(--brown3);
+  box-shadow: 0 0 0 3px rgba(123, 79, 46, 0.08);
+}
+
+.search-wrap .ui-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--ink4);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--ink4);
+}
+
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--ink4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+
+.search-clear:hover {
+  color: var(--ink);
+  background: var(--off3);
+}
+
+.search-clear .ui-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.hico.is-active {
+  background: rgba(123, 79, 46, 0.08);
+  border-color: var(--brown3);
+  color: var(--brown);
+}
+
 .tabs {
   display: flex;
   gap: 0;
