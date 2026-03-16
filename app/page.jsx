@@ -2014,7 +2014,7 @@ export default function Home({ routeMode = "shop" } = {}) {
             </div>
           </div>
 
-          <div className="search-bar rv">
+          <div className="search-bar">
             <div className="search-wrap">
               <Icon name="search" />
               <input
