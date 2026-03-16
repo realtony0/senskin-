@@ -1861,6 +1861,41 @@ export default function Home({ routeMode = "shop" } = {}) {
           </div>
         </header>
 
+        <div className="hdr-search-row">
+          <div className="hdr-search-in">
+            <div className="search-wrap">
+              <Icon name="search" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                className="search-input"
+                placeholder="Rechercher un produit, une marque…"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  if (event.target.value) {
+                    document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" });
+                  }
+                }}
+                aria-label="Rechercher un produit"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="search-clear"
+                  aria-label="Effacer la recherche"
+                  onClick={() => {
+                    setSearchQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  <Icon name="close" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
         <section className="hero">
           <div className="hero-in">
             <div>
@@ -2014,33 +2049,6 @@ export default function Home({ routeMode = "shop" } = {}) {
             </div>
           </div>
 
-          <div className="search-bar">
-            <div className="search-wrap">
-              <Icon name="search" />
-              <input
-                ref={searchInputRef}
-                type="search"
-                className="search-input"
-                placeholder="Rechercher un produit, une marque…"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                aria-label="Rechercher un produit"
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  className="search-clear"
-                  aria-label="Effacer la recherche"
-                  onClick={() => {
-                    setSearchQuery("");
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  <Icon name="close" />
-                </button>
-              ) : null}
-            </div>
-          </div>
 
           <div className="tabs rv" id="tabs">
             {productTabs.map((tab) => (
