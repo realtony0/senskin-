@@ -21,6 +21,13 @@ function getMutationValues(payload) {
   ];
 }
 
+function replaceBase64WithProxy(row) {
+  if (row.image && row.image.startsWith("data:")) {
+    return { ...row, image: `/api/products/${row.id}/image` };
+  }
+  return row;
+}
+
 export async function GET() {
   try {
     const { rows } = await query(
@@ -28,7 +35,7 @@ export async function GET() {
     );
 
     return NextResponse.json({
-      products: rows.map(mapProductRow),
+      products: rows.map(replaceBase64WithProxy).map(mapProductRow),
       source: "database",
     });
   } catch (error) {
