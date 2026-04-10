@@ -2519,7 +2519,7 @@ export default function Home({ routeMode = "shop" } = {}) {
               <div className="panel-hd">
                 <h2>Commandes récentes</h2>
               </div>
-              {databaseStatusMessage ? <div className="panel-note">{databaseStatusMessage}</div> : null}
+
               {!orders.length ? (
                 <p className="empty-orders">Aucune commande.</p>
               ) : (
@@ -2538,7 +2538,7 @@ export default function Home({ routeMode = "shop" } = {}) {
               <div className="panel-hd">
                 <h2>Toutes les commandes</h2>
               </div>
-              {databaseStatusMessage ? <div className="panel-note">{databaseStatusMessage}</div> : null}
+
               {!orders.length ? (
                 <p className="empty-orders">Aucune commande.</p>
               ) : (
@@ -2561,12 +2561,7 @@ export default function Home({ routeMode = "shop" } = {}) {
                   Ajouter
                 </button>
               </div>
-              {databaseStatusMessage ? <div className="panel-note">{databaseStatusMessage}</div> : null}
-              {productsSource === "database" ? (
-                <div className="panel-note ok">Catalogue synchronisé avec la base de données.</div>
-              ) : (
-                <div className="panel-note">Catalogue chargé depuis le fichier local du projet.</div>
-              )}
+
               <div className="table-scroll">
                 <table className="atbl">
                   <thead>
@@ -2718,16 +2713,6 @@ export default function Home({ routeMode = "shop" } = {}) {
             <div className={cn("adm-panel", adminPanel === "settings" && "on")}>
               <div className="panel-hd">
                 <h2>Paramètres</h2>
-              </div>
-              <div className="panel-note">
-                Connexion active:
-                {" "}
-                {productsSource === "database" && ordersSource === "database"
-                  ? "base distante"
-                  : ordersSource !== "local"
-                    ? "mode mixte"
-                    : "mode local"}
-                .
               </div>
               <div className="settings-box">
                 <label className="flbl">Nom boutique</label>
