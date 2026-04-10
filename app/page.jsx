@@ -2563,7 +2563,7 @@ export default function Home({ routeMode = "shop" } = {}) {
               </div>
               {databaseStatusMessage ? <div className="panel-note">{databaseStatusMessage}</div> : null}
               {productsSource === "database" ? (
-                <div className="panel-note ok">Catalogue synchronisé avec la base Supabase.</div>
+                <div className="panel-note ok">Catalogue synchronisé avec la base de données.</div>
               ) : (
                 <div className="panel-note">Catalogue chargé depuis le fichier local du projet.</div>
               )}
