@@ -5,7 +5,7 @@ create table if not exists public.products (
   name text not null,
   category text not null,
   subcategory text not null default '',
-  emoji text not null default '📦',
+  emoji text not null default '',
   image text not null default '',
   description text not null default '',
   price integer not null default 0 check (price >= 0),
@@ -13,12 +13,6 @@ create table if not exists public.products (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
-
-alter table public.products
-add column if not exists image text not null default '';
-
-alter table public.products
-add column if not exists subcategory text not null default '';
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -58,24 +52,3 @@ create trigger orders_set_updated_at
 before update on public.orders
 for each row
 execute function public.set_updated_at();
-
-alter table public.products enable row level security;
-alter table public.orders enable row level security;
-
-grant usage on schema public to anon, authenticated;
-grant select on table public.products to anon, authenticated;
-grant insert on table public.orders to anon, authenticated;
-grant usage on all sequences in schema public to anon, authenticated;
-
-drop policy if exists products_public_read on public.products;
-create policy products_public_read
-on public.products
-for select
-using (true);
-
-drop policy if exists orders_public_insert on public.orders;
-create policy orders_public_insert
-on public.orders
-for insert
-to anon, authenticated
-with check (status in ('new', 'done', 'cancel'));

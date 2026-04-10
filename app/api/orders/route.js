@@ -3,14 +3,6 @@ import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { query } from "@/lib/db";
 import { mapOrderPayload, mapOrderRow } from "@/lib/supabase/mappers";
-import {
-  createPublicSupabaseClient,
-  hasPublicSupabaseConfig,
-} from "@/lib/supabase/public-server";
-import {
-  createServiceSupabaseClient,
-  hasServiceSupabaseConfig,
-} from "@/lib/supabase/service-server";
 
 const ORDER_COLUMNS =
   "id, order_code, order_date, customer_name, customer_phone, customer_address, shipping_zone, payment_method, items, shipping_fee, total, status";
@@ -30,42 +22,8 @@ export async function GET(request) {
     );
 
     return NextResponse.json({ orders: rows.map(mapOrderRow), source: "database" });
-  } catch (error) {
-    if (hasServiceSupabaseConfig()) {
-      try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error: supabaseError } = await supabase
-          .from("orders")
-          .select(ORDER_COLUMNS)
-          .order("created_at", { ascending: false });
-
-        if (supabaseError) {
-          throw supabaseError;
-        }
-
-        return NextResponse.json({
-          orders: (data || []).map(mapOrderRow),
-          source: "supabase",
-        });
-      } catch (fallbackError) {
-        return NextResponse.json({
-          orders: [],
-          source: "local",
-          warning:
-            fallbackError.message ||
-            error.message ||
-            "Unable to fetch orders from database or Supabase.",
-        });
-      }
-    }
-
-    return NextResponse.json({
-      orders: [],
-      source: "local",
-      warning:
-        error.message ||
-        "Unable to fetch orders. A working DATABASE_URL or pooled connection is required.",
-    });
+  } catch {
+    return NextResponse.json({ orders: [], source: "local" });
   }
 }
 
@@ -97,59 +55,9 @@ export async function POST(request) {
     );
 
     return NextResponse.json({ order: mapOrderRow(rows[0]), source: "database" });
-  } catch (dbError) {
-    if (hasServiceSupabaseConfig()) {
-      try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error } = await supabase
-          .from("orders")
-          .insert(payload)
-          .select(ORDER_COLUMNS)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        return NextResponse.json({ order: mapOrderRow(data), source: "supabase" });
-      } catch (supabaseError) {
-        return NextResponse.json(
-          {
-            error:
-              supabaseError.message ||
-              dbError.message ||
-              "Unable to create order in database or Supabase",
-          },
-          { status: 500 },
-        );
-      }
-    }
-
-    if (hasPublicSupabaseConfig()) {
-      try {
-        const supabase = createPublicSupabaseClient();
-        const { error } = await supabase.from("orders").insert(payload);
-
-        if (error) {
-          throw error;
-        }
-
-        return NextResponse.json({ order, source: "supabase" });
-      } catch (supabaseError) {
-        return NextResponse.json(
-          {
-            error:
-              supabaseError.message ||
-              dbError.message ||
-              "Unable to create order in database or Supabase",
-          },
-          { status: 500 },
-        );
-      }
-    }
-
+  } catch (error) {
     return NextResponse.json(
-      { error: dbError.message || "Unable to create order in database" },
+      { error: error.message || "Unable to create order" },
       { status: 500 },
     );
   }
@@ -178,45 +86,9 @@ export async function PATCH(request) {
     }
 
     return NextResponse.json({ order: mapOrderRow(rows[0]) });
-  } catch (dbError) {
-    if (hasServiceSupabaseConfig()) {
-      try {
-        const supabase = createServiceSupabaseClient();
-        const { data, error } = await supabase
-          .from("orders")
-          .update({ status })
-          .eq("order_code", id)
-          .select(ORDER_COLUMNS)
-          .maybeSingle();
-
-        if (error) {
-          throw error;
-        }
-
-        if (!data) {
-          return NextResponse.json({ error: "Order not found" }, { status: 404 });
-        }
-
-        return NextResponse.json({ order: mapOrderRow(data), source: "supabase" });
-      } catch (supabaseError) {
-        return NextResponse.json(
-          {
-            error:
-              supabaseError.message ||
-              dbError.message ||
-              "Unable to update order in database or Supabase.",
-          },
-          { status: 500 },
-        );
-      }
-    }
-
+  } catch (error) {
     return NextResponse.json(
-      {
-        error:
-          dbError.message ||
-          "Unable to update order. A working DATABASE_URL or pooled connection is required.",
-      },
+      { error: error.message || "Unable to update order" },
       { status: 500 },
     );
   }
