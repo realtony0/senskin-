@@ -748,18 +748,6 @@ export default function Home({ routeMode = "shop" } = {}) {
       setCategoryLabels(nextCategoryLabels);
       setCategorySubcategoryOptions(nextCategorySubcategoryOptions);
 
-      if (Array.isArray(parsed.products) && parsed.products.length) {
-        const mergedTaxonomy = mergeTaxonomyWithProducts(
-          nextCategoryLabels,
-          nextCategorySubcategoryOptions,
-          parsed.products,
-        );
-
-        setCategoryLabels(mergedTaxonomy.labels);
-        setCategorySubcategoryOptions(mergedTaxonomy.options);
-        setProducts(normalizeProducts(parsed.products, mergedTaxonomy.options));
-      }
-
       if (Array.isArray(parsed.orders)) {
         setOrders(parsed.orders);
       }
@@ -795,7 +783,6 @@ export default function Home({ routeMode = "shop" } = {}) {
     }
 
     const payload = JSON.stringify({
-      products,
       orders,
       cart,
       settings,
