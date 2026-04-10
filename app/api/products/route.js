@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/lib/admin-auth";
 import { query } from "@/lib/db";
-import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
 import { mapProductPayload, mapProductRow } from "@/lib/supabase/mappers";
 
 const SELECT_COLUMNS = "id, name, category, subcategory, emoji, image, description, price, stock";
@@ -32,11 +31,11 @@ export async function GET() {
       products: rows.map(mapProductRow),
       source: "database",
     });
-  } catch {
-    return NextResponse.json({
-      products: INITIAL_PRODUCTS,
-      source: "local",
-    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error.message || "Unable to load products" },
+      { status: 500 },
+    );
   }
 }
 

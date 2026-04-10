@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import { INITIAL_PRODUCTS } from "@/lib/catalog-data";
 import { MMB_WHATSAPP_LINK } from "@/lib/site";
 import {
   buildSubcategoryLabels,
@@ -688,7 +687,7 @@ export default function Home({ routeMode = "shop" } = {}) {
   const [currentPage, setCurrentPage] = useState(isAdminRoute ? "admin" : "shop");
   const [activeTab, setActiveTab] = useState("tous");
   const [activeSubcategory, setActiveSubcategory] = useState("tous");
-  const [products, setProducts] = useState(() => normalizeProducts(INITIAL_PRODUCTS));
+  const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [cart, setCart] = useState([]);
   const [settings, setSettings] = useState(INITIAL_SETTINGS);
