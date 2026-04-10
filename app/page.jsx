@@ -2556,7 +2556,7 @@ export default function Home({ routeMode = "shop" } = {}) {
             <div className={cn("adm-panel", adminPanel === "products" && "on")}>
               <div className="panel-hd">
                 <h2>Gestion des produits</h2>
-                <button type="button" className="btn-add" onClick={() => openProductForm()}>
+                <button type="button" className="btn-add" disabled style={{ opacity: 0.4, cursor: "not-allowed" }}>
                   <Icon name="plus" />
                   Ajouter
                 </button>
